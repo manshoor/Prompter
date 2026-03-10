@@ -64,6 +64,12 @@ pub struct AudioRecorder {
     channels: Mutex<u16>,
 }
 
+// SAFETY: AudioRecorder fields are all protected by Mutex. The cpal::Stream is not Send/Sync
+// due to platform-specific marker types, but we only access it through the Mutex, ensuring
+// exclusive access. The stream is created and dropped while holding the lock.
+unsafe impl Send for AudioRecorder {}
+unsafe impl Sync for AudioRecorder {}
+
 impl AudioRecorder {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         Ok(Self {

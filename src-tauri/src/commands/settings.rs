@@ -1,12 +1,18 @@
 use tauri::State;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use crate::settings::manager::SettingsManager;
 use crate::settings::types::AppSettings;
 use crate::keychain::macos::KeychainManager;
+use crate::clipboard::manager::ClipboardManager;
+use crate::audio::recorder::AudioRecorder;
+use crate::storage::database::Database;
 
 pub struct AppState {
     pub settings_manager: Mutex<SettingsManager>,
     pub keychain: KeychainManager,
+    pub clipboard: Mutex<ClipboardManager>,
+    pub audio_recorder: Arc<AudioRecorder>,
+    pub db: Mutex<Database>,
 }
 
 #[tauri::command]
