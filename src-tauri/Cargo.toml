@@ -32,4 +32,5 @@ security-framework = "2"
 hound = "3.5"
 chrono = "0.4"
 dirs = "5"
+tauri-plugin-global-shortcut = "2"
 
