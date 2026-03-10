@@ -1,12 +1,20 @@
 import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { FloatingWidget } from "./components/FloatingWidget";
-import { listen } from "@tauri-apps/api/event";
+import { Onboarding } from "./components/Onboarding";
 import { useRecordingStore } from "./stores/recordingStore";
 
 function App() {
-  const [view, setView] = useState<"widget" | "settings">("widget");
+  const [view, setView] = useState<"loading" | "onboarding" | "widget" | "settings">("loading");
   const { startRecording } = useRecordingStore();
+
+  useEffect(() => {
+    invoke<boolean>("is_first_run").then((isFirst) => {
+      setView(isFirst ? "onboarding" : "widget");
+    });
+  }, []);
 
   useEffect(() => {
     const unlisten = listen("hotkey-triggered", () => {
@@ -22,6 +30,12 @@ function App() {
     };
   }, [startRecording]);
 
+  if (view === "loading") {
+    return <div className="min-h-screen bg-gray-950 flex items-center justify-center text-gray-400">Loading...</div>;
+  }
+  if (view === "onboarding") {
+    return <Onboarding onComplete={() => setView("widget")} />;
+  }
   if (view === "settings") {
     return (
       <div className="min-h-screen bg-gray-950 text-gray-100">

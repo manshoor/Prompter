@@ -59,6 +59,8 @@ pub fn run() {
             commands::prompt::generate_prompt,
             commands::prompt::paste_to_app,
             commands::prompt::get_prompt_history,
+            commands::onboarding::is_first_run,
+            commands::onboarding::complete_onboarding,
         ])
         .setup(|app| {
             // Build tray menu
