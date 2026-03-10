@@ -87,7 +87,7 @@ export function SettingsPanel() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+    <div className="settings-panel min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="mx-auto max-w-2xl">
         <h1 className="mb-6 flex items-center gap-2 text-xl font-bold text-gray-900 dark:text-gray-100">
           <Settings size={24} />

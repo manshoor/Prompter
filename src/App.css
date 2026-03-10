@@ -1,1 +1,151 @@
 @import "tailwindcss";
+
+/* Base app styles */
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 3px;
+}
+
+/* Settings panel */
+.settings-panel {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.settings-panel section {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 0.75rem;
+}
+
+.settings-panel h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #f9fafb;
+  margin-bottom: 1.5rem;
+}
+
+.settings-panel h2 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+
+.settings-panel label {
+  display: block;
+  font-size: 0.8125rem;
+  color: #d1d5db;
+  margin-bottom: 0.375rem;
+  margin-top: 0.75rem;
+}
+
+.settings-panel label:first-child {
+  margin-top: 0;
+}
+
+.settings-panel select,
+.settings-panel input[type="text"],
+.settings-panel input[type="password"] {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 0.5rem;
+  color: #f3f4f6;
+  font-size: 0.8125rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.settings-panel select:focus,
+.settings-panel input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.settings-panel input[type="range"] {
+  width: 100%;
+  accent-color: #3b82f6;
+}
+
+/* API key input */
+.api-key-input {
+  margin-bottom: 0.75rem;
+}
+
+.api-key-input .input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.api-key-input .input-row input {
+  flex: 1;
+}
+
+.api-key-input .input-row button {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  border-radius: 0.375rem;
+  border: 1px solid #374151;
+  background: #1f2937;
+  color: #d1d5db;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.api-key-input .input-row button:hover:not(:disabled) {
+  background: #374151;
+  color: #f3f4f6;
+}
+
+.api-key-input .input-row button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.api-key-input .input-row button.danger {
+  border-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+.api-key-input .input-row button.danger:hover {
+  background: #7f1d1d;
+  color: #fef2f2;
+}
+
+/* Animations */
+@keyframes pulse-recording {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.animate-recording {
+  animation: pulse-recording 1.5s ease-in-out infinite;
+}

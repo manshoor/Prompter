@@ -6,7 +6,7 @@ export function RecordingView() {
   return (
     <div className="flex flex-col items-center gap-4 p-6">
       <div className="flex items-center gap-3">
-        <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+        <div className="w-3 h-3 bg-red-500 rounded-full animate-recording" />
         <span className="text-sm text-gray-300">
           {state === "recording" && "Recording... Speak your intent"}
           {state === "transcribing" && "Transcribing..."}
