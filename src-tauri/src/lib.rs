@@ -16,6 +16,12 @@ use settings::manager::SettingsManager;
 use storage::database::Database;
 use clipboard::manager::ClipboardManager;
 use audio::recorder::AudioRecorder;
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::TrayIconBuilder,
+    Manager,
+    Emitter,
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -54,6 +60,62 @@ pub fn run() {
             commands::prompt::paste_to_app,
             commands::prompt::get_prompt_history,
         ])
+        .setup(|app| {
+            // Build tray menu
+            let start = MenuItem::with_id(app, "start", "Start Recording", true, None::<&str>)?;
+            let settings_item = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
+            let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+
+            let menu = Menu::with_items(app, &[&start, &settings_item, &quit])?;
+
+            let _tray = TrayIconBuilder::new()
+                .menu(&menu)
+                .icon(app.default_window_icon().unwrap().clone())
+                .on_menu_event(move |app, event| {
+                    match event.id.as_ref() {
+                        "start" => {
+                            let _ = app.emit("hotkey-triggered", ());
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        "settings" => {
+                            let _ = app.emit("open-settings", ());
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        "quit" => {
+                            app.exit(0);
+                        }
+                        _ => {}
+                    }
+                })
+                .build(app)?;
+
+            // Register global hotkey from settings
+            let app_handle = app.handle().clone();
+            let settings_state = app.state::<AppState>();
+            let hotkey_str = settings_state.settings_manager.lock().unwrap()
+                .load().unwrap_or_default().global_hotkey;
+
+            use tauri_plugin_global_shortcut::GlobalShortcutExt;
+            if let Ok(shortcut) = hotkey_str.parse::<tauri_plugin_global_shortcut::Shortcut>() {
+                let _ = app.global_shortcut().on_shortcut(shortcut, move |_app, _shortcut, event| {
+                    if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        let _ = app_handle.emit("hotkey-triggered", ());
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                });
+            }
+
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
