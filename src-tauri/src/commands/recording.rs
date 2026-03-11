@@ -65,6 +65,12 @@ pub async fn stop_recording(state: State<'_, AppState>) -> Result<String, String
         }
         crate::settings::types::WhisperMode::Local => {
             let whisper = crate::whisper::local::LocalWhisper::new(&settings.local_whisper_model);
+            if !whisper.is_model_downloaded() {
+                whisper
+                    .download_model()
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
             whisper.transcribe(&wav_bytes).map_err(|e| e.to_string())?
         }
     };
