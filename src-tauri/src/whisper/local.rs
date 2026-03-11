@@ -23,6 +23,7 @@ impl LocalWhisper {
             .to_string()
     }
 
+    #[allow(dead_code)]
     pub fn model_url(model_name: &str) -> String {
         format!(
             "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-{}.bin",
@@ -30,10 +31,12 @@ impl LocalWhisper {
         )
     }
 
+    #[allow(dead_code)]
     pub fn is_model_downloaded(&self) -> bool {
         PathBuf::from(Self::model_path(&self.model_name)).exists()
     }
 
+    #[allow(dead_code)]
     pub async fn download_model(&self) -> Result<(), Box<dyn std::error::Error>> {
         let path = PathBuf::from(Self::model_path(&self.model_name));
         if path.exists() {

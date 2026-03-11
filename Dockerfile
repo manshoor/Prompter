@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libayatana-appindicator3-dev \
     librsvg2-dev \
     libasound2-dev \
+    libclang-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
 

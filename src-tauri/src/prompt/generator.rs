@@ -133,8 +133,7 @@ mod tests {
     #[test]
     fn test_build_messages_no_selection() {
         let gen = PromptGenerator::new("claude", "sk-test");
-        let messages =
-            gen.build_messages(None, Some("create a new react component"), "VS Code");
+        let messages = gen.build_messages(None, Some("create a new react component"), "VS Code");
         assert_eq!(messages.len(), 2);
         assert!(!messages[1]["content"]
             .as_str()

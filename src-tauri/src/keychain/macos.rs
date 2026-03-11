@@ -18,10 +18,7 @@ impl KeychainManager {
         Ok(())
     }
 
-    pub fn retrieve(
-        &self,
-        account: &str,
-    ) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    pub fn retrieve(&self, account: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
         match get_generic_password(&self.service, account) {
             Ok(bytes) => Ok(Some(String::from_utf8(bytes)?)),
             Err(e) if e.code() == -25300 => Ok(None), // errSecItemNotFound

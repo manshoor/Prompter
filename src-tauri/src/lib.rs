@@ -1,26 +1,25 @@
-mod storage;
-mod settings;
-mod keychain;
-mod hotkey;
-mod clipboard;
-mod focus;
 mod audio;
-mod whisper;
-mod prompt;
+mod clipboard;
 mod commands;
+mod focus;
+mod hotkey;
+mod keychain;
+mod prompt;
+mod settings;
+mod storage;
+mod whisper;
 
-use std::sync::{Arc, Mutex};
+use audio::recorder::AudioRecorder;
+use clipboard::manager::ClipboardManager;
 use commands::settings::AppState;
 use keychain::macos::KeychainManager;
 use settings::manager::SettingsManager;
+use std::sync::{Arc, Mutex};
 use storage::database::Database;
-use clipboard::manager::ClipboardManager;
-use audio::recorder::AudioRecorder;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
-    Manager,
-    Emitter,
+    Emitter, Manager,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -73,47 +72,52 @@ pub fn run() {
             let _tray = TrayIconBuilder::new()
                 .menu(&menu)
                 .icon(app.default_window_icon().unwrap().clone())
-                .on_menu_event(move |app, event| {
-                    match event.id.as_ref() {
-                        "start" => {
-                            let _ = app.emit("hotkey-triggered", ());
-                            if let Some(window) = app.get_webview_window("main") {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                            }
+                .on_menu_event(move |app, event| match event.id.as_ref() {
+                    "start" => {
+                        let _ = app.emit("hotkey-triggered", ());
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
                         }
-                        "settings" => {
-                            let _ = app.emit("open-settings", ());
-                            if let Some(window) = app.get_webview_window("main") {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                            }
-                        }
-                        "quit" => {
-                            app.exit(0);
-                        }
-                        _ => {}
                     }
+                    "settings" => {
+                        let _ = app.emit("open-settings", ());
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    _ => {}
                 })
                 .build(app)?;
 
             // Register global hotkey from settings
             let app_handle = app.handle().clone();
             let settings_state = app.state::<AppState>();
-            let hotkey_str = settings_state.settings_manager.lock().unwrap()
-                .load().unwrap_or_default().global_hotkey;
+            let hotkey_str = settings_state
+                .settings_manager
+                .lock()
+                .unwrap()
+                .load()
+                .unwrap_or_default()
+                .global_hotkey;
 
             use tauri_plugin_global_shortcut::GlobalShortcutExt;
             if let Ok(shortcut) = hotkey_str.parse::<tauri_plugin_global_shortcut::Shortcut>() {
-                let _ = app.global_shortcut().on_shortcut(shortcut, move |_app, _shortcut, event| {
-                    if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
-                        let _ = app_handle.emit("hotkey-triggered", ());
-                        if let Some(window) = app_handle.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
-                    }
-                });
+                let _ =
+                    app.global_shortcut()
+                        .on_shortcut(shortcut, move |_app, _shortcut, event| {
+                            if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                                let _ = app_handle.emit("hotkey-triggered", ());
+                                if let Some(window) = app_handle.get_webview_window("main") {
+                                    let _ = window.show();
+                                    let _ = window.set_focus();
+                                }
+                            }
+                        });
             }
 
             Ok(())

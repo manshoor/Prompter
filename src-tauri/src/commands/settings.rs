@@ -1,11 +1,11 @@
-use tauri::State;
-use std::sync::{Arc, Mutex};
+use crate::audio::recorder::AudioRecorder;
+use crate::clipboard::manager::ClipboardManager;
+use crate::keychain::macos::KeychainManager;
 use crate::settings::manager::SettingsManager;
 use crate::settings::types::AppSettings;
-use crate::keychain::macos::KeychainManager;
-use crate::clipboard::manager::ClipboardManager;
-use crate::audio::recorder::AudioRecorder;
 use crate::storage::database::Database;
+use std::sync::{Arc, Mutex};
+use tauri::State;
 
 pub struct AppState {
     pub settings_manager: Mutex<SettingsManager>,
@@ -17,22 +17,38 @@ pub struct AppState {
 
 #[tauri::command]
 pub fn get_settings(state: State<AppState>) -> Result<AppSettings, String> {
-    state.settings_manager.lock().unwrap().load().map_err(|e| e.to_string())
+    state
+        .settings_manager
+        .lock()
+        .unwrap()
+        .load()
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn save_settings(state: State<AppState>, settings: AppSettings) -> Result<(), String> {
-    state.settings_manager.lock().unwrap().save(&settings).map_err(|e| e.to_string())
+    state
+        .settings_manager
+        .lock()
+        .unwrap()
+        .save(&settings)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn store_api_key(state: State<AppState>, provider: String, key: String) -> Result<(), String> {
-    state.keychain.store(&provider, &key).map_err(|e| e.to_string())
+    state
+        .keychain
+        .store(&provider, &key)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn get_api_key(state: State<AppState>, provider: String) -> Result<Option<String>, String> {
-    state.keychain.retrieve(&provider).map_err(|e| e.to_string())
+    state
+        .keychain
+        .retrieve(&provider)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

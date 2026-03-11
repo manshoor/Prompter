@@ -1,5 +1,7 @@
+#[allow(dead_code)]
 pub struct HotkeyManager;
 
+#[allow(dead_code)]
 impl HotkeyManager {
     /// Parses and validates a hotkey string (e.g. "CmdOrCtrl+Shift+P").
     ///

@@ -1,5 +1,5 @@
-use crate::storage::database::Database;
 use super::types::AppSettings;
+use crate::storage::database::Database;
 
 pub struct SettingsManager {
     db: Database,
@@ -27,8 +27,8 @@ impl SettingsManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::database::Database;
     use crate::settings::types::*;
+    use crate::storage::database::Database;
 
     #[test]
     fn test_default_settings() {

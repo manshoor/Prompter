@@ -1,7 +1,7 @@
-use tauri::State;
 use crate::commands::settings::AppState;
 use crate::prompt::generator::PromptGenerator;
 use crate::settings::types::PromptModel;
+use tauri::State;
 
 #[tauri::command]
 pub async fn generate_prompt(

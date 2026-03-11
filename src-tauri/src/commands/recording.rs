@@ -1,6 +1,6 @@
-use tauri::State;
 use crate::commands::settings::AppState;
 use crate::focus::tracker::FocusTracker;
+use tauri::State;
 
 #[tauri::command]
 pub async fn start_recording(state: State<'_, AppState>) -> Result<String, String> {
@@ -8,7 +8,12 @@ pub async fn start_recording(state: State<'_, AppState>) -> Result<String, Strin
     let app_info = FocusTracker::get_frontmost_app().map_err(|e| e.to_string())?;
 
     // Save current clipboard
-    state.clipboard.lock().unwrap().save_current().map_err(|e| e.to_string())?;
+    state
+        .clipboard
+        .lock()
+        .unwrap()
+        .save_current()
+        .map_err(|e| e.to_string())?;
 
     // Simulate Cmd+C to copy selection
     std::process::Command::new("osascript")
@@ -59,8 +64,7 @@ pub async fn stop_recording(state: State<'_, AppState>) -> Result<String, String
                 .map_err(|e| e.to_string())?
         }
         crate::settings::types::WhisperMode::Local => {
-            let whisper =
-                crate::whisper::local::LocalWhisper::new(&settings.local_whisper_model);
+            let whisper = crate::whisper::local::LocalWhisper::new(&settings.local_whisper_model);
             whisper.transcribe(&wav_bytes).map_err(|e| e.to_string())?
         }
     };
