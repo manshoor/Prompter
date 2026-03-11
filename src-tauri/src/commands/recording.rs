@@ -84,11 +84,16 @@ pub async fn stop_recording(
 
     let transcription = match settings.whisper_mode {
         crate::settings::types::WhisperMode::Cloud => {
-            let api_key = state
-                .keychain
-                .retrieve("openai")
-                .map_err(|e| e.to_string())?
-                .ok_or("OpenAI API key not configured")?;
+            let db_key = "api_key_openai";
+            let api_key = if let Ok(Some(key)) = state.db.lock().unwrap().get_setting(db_key) {
+                key
+            } else if let Ok(Some(key)) = state.keychain.retrieve("openai") {
+                // Migrate to database for future reliability
+                let _ = state.db.lock().unwrap().set_setting(db_key, &key);
+                key
+            } else {
+                return Err("OpenAI API key not configured".to_string());
+            };
             eprintln!(
                 "[stop_recording] using Cloud whisper (key: {}...)",
                 &api_key[..8.min(api_key.len())]

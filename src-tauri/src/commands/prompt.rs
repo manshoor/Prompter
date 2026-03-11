@@ -40,17 +40,20 @@ pub async fn generate_prompt(
         settings.prompt_model, provider, key_name
     );
 
-    let api_key = state
-        .keychain
-        .retrieve(key_name)
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| {
-            eprintln!(
-                "[generate_prompt] ERROR: {} API key not configured",
-                provider
-            );
-            format!("{} API key not configured", provider)
-        })?;
+    let db_key = format!("api_key_{}", key_name);
+    let api_key = if let Ok(Some(key)) = state.db.lock().unwrap().get_setting(&db_key) {
+        key
+    } else if let Ok(Some(key)) = state.keychain.retrieve(key_name) {
+        // Migrate to database for future reliability
+        let _ = state.db.lock().unwrap().set_setting(&db_key, &key);
+        key
+    } else {
+        eprintln!(
+            "[generate_prompt] ERROR: {} API key not configured",
+            provider
+        );
+        return Err(format!("{} API key not configured", provider));
+    };
 
     eprintln!(
         "[generate_prompt] API key found ({}...)",
