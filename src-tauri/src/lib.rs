@@ -98,6 +98,7 @@ pub fn run() {
             commands::recording::download_whisper_model,
             commands::prompt::generate_prompt,
             commands::prompt::paste_to_app,
+            commands::prompt::copy_to_clipboard,
             commands::prompt::get_prompt_history,
             commands::onboarding::is_first_run,
             commands::onboarding::complete_onboarding,

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { useRecordingStore } from "../../stores/recordingStore";
 
 export function PreviewView() {
@@ -22,7 +23,7 @@ export function PreviewView() {
           Paste to App
         </button>
         <button
-          onClick={() => navigator.clipboard.writeText(editedPrompt)}
+          onClick={() => invoke("copy_to_clipboard", { text: editedPrompt })}
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-sm transition-colors"
         >
           Copy

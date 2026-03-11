@@ -125,6 +125,16 @@ pub async fn paste_to_app(
 }
 
 #[tauri::command]
+pub fn copy_to_clipboard(state: State<AppState>, text: String) -> Result<(), String> {
+    state
+        .clipboard
+        .lock()
+        .unwrap()
+        .write(&text)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn get_prompt_history(state: State<AppState>, limit: i64) -> Result<String, String> {
     let history = state
         .db
