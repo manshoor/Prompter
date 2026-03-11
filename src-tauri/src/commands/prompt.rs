@@ -10,6 +10,15 @@ pub async fn generate_prompt(
     spoken_intent: Option<String>,
     source_app: String,
 ) -> Result<String, String> {
+    eprintln!("[generate_prompt] called");
+    eprintln!(
+        "[generate_prompt] selected_text: {:?} ({} chars)",
+        selected_text.as_deref().map(|s| s.chars().take(80).collect::<String>()),
+        selected_text.as_deref().map_or(0, |s| s.len())
+    );
+    eprintln!("[generate_prompt] spoken_intent: {:?}", spoken_intent);
+    eprintln!("[generate_prompt] source_app: {}", source_app);
+
     let settings = state
         .settings_manager
         .lock()
@@ -24,11 +33,24 @@ pub async fn generate_prompt(
         PromptModel::Gpt4o | PromptModel::Gpt4oMini => ("openai", "openai"),
     };
 
+    eprintln!(
+        "[generate_prompt] model: {:?}, provider: {}, key_name: {}",
+        settings.prompt_model, provider, key_name
+    );
+
     let api_key = state
         .keychain
         .retrieve(key_name)
         .map_err(|e| e.to_string())?
-        .ok_or(format!("{} API key not configured", provider))?;
+        .ok_or_else(|| {
+            eprintln!("[generate_prompt] ERROR: {} API key not configured", provider);
+            format!("{} API key not configured", provider)
+        })?;
+
+    eprintln!(
+        "[generate_prompt] API key found ({}...)",
+        &api_key[..8.min(api_key.len())]
+    );
 
     let generator = PromptGenerator::new(provider, &api_key);
     let prompt = generator
@@ -38,7 +60,15 @@ pub async fn generate_prompt(
             &source_app,
         )
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            eprintln!("[generate_prompt] ERROR from API: {}", e);
+            e.to_string()
+        })?;
+
+    eprintln!(
+        "[generate_prompt] success ({} chars)",
+        prompt.len()
+    );
 
     // Save to history
     state

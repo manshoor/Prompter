@@ -16,20 +16,33 @@ fn emit_download_progress(app: &tauri::AppHandle, downloaded: u64, total: u64) {
 
 #[tauri::command]
 pub async fn start_recording(state: State<'_, AppState>) -> Result<String, String> {
+    eprintln!("[start_recording] called");
+
     // Read pre-captured context (captured by hotkey handler before window was shown)
     let context = state.captured_context.lock().unwrap().take();
 
     let (selected_text, source_app) = match context {
-        Some(ctx) => (ctx.selected_text, ctx.source_app),
+        Some(ctx) => {
+            eprintln!(
+                "[start_recording] using pre-captured context: app={:?}, text={} chars",
+                ctx.source_app.as_ref().map(|a| &a.name),
+                ctx.selected_text.len()
+            );
+            (ctx.selected_text, ctx.source_app)
+        }
         None => {
-            // Fallback: try to capture now (may not work if window has focus)
+            eprintln!("[start_recording] WARNING: no pre-captured context, using fallback");
             let app_info = FocusTracker::get_frontmost_app().ok();
             (String::new(), app_info)
         }
     };
 
     // Start audio recording
-    state.audio_recorder.start().map_err(|e| e.to_string())?;
+    state.audio_recorder.start().map_err(|e| {
+        eprintln!("[start_recording] ERROR starting audio: {}", e);
+        e.to_string()
+    })?;
+    eprintln!("[start_recording] audio recording started");
 
     // Return source app info + selected text
     Ok(serde_json::json!({
@@ -44,8 +57,21 @@ pub async fn stop_recording(
     state: State<'_, AppState>,
     app: tauri::AppHandle,
 ) -> Result<String, String> {
-    let audio_data = state.audio_recorder.stop().map_err(|e| e.to_string())?;
-    let wav_bytes = audio_data.to_wav_bytes().map_err(|e| e.to_string())?;
+    eprintln!("[stop_recording] called");
+
+    let audio_data = state.audio_recorder.stop().map_err(|e| {
+        eprintln!("[stop_recording] ERROR stopping audio: {}", e);
+        e.to_string()
+    })?;
+
+    let wav_bytes = audio_data.to_wav_bytes().map_err(|e| {
+        eprintln!("[stop_recording] ERROR converting to WAV: {}", e);
+        e.to_string()
+    })?;
+    eprintln!(
+        "[stop_recording] audio captured: {} bytes WAV",
+        wav_bytes.len()
+    );
 
     let settings = state
         .settings_manager
@@ -54,6 +80,11 @@ pub async fn stop_recording(
         .load()
         .map_err(|e| e.to_string())?;
 
+    eprintln!(
+        "[stop_recording] whisper mode: {:?}",
+        settings.whisper_mode
+    );
+
     let transcription = match settings.whisper_mode {
         crate::settings::types::WhisperMode::Cloud => {
             let api_key = state
@@ -61,24 +92,41 @@ pub async fn stop_recording(
                 .retrieve("openai")
                 .map_err(|e| e.to_string())?
                 .ok_or("OpenAI API key not configured")?;
+            eprintln!("[stop_recording] using Cloud whisper (key: {}...)", &api_key[..8.min(api_key.len())]);
             let whisper = crate::whisper::cloud::CloudWhisper::new(api_key);
-            whisper
-                .transcribe(&wav_bytes)
-                .await
-                .map_err(|e| e.to_string())?
+            let result = whisper.transcribe(&wav_bytes).await.map_err(|e| {
+                eprintln!("[stop_recording] ERROR cloud transcription: {}", e);
+                e.to_string()
+            })?;
+            eprintln!("[stop_recording] transcription: {:?}", result);
+            result
         }
         crate::settings::types::WhisperMode::Local => {
+            eprintln!(
+                "[stop_recording] using Local whisper (model: {})",
+                settings.local_whisper_model
+            );
             let whisper = crate::whisper::local::LocalWhisper::new(&settings.local_whisper_model);
             if !whisper.is_model_downloaded() {
+                eprintln!("[stop_recording] model not found, downloading...");
                 let _ = app.emit("model-download-started", ());
                 whisper
                     .download_model_with_progress(|downloaded, total| {
                         emit_download_progress(&app, downloaded, total);
                     })
                     .await
-                    .map_err(|e| e.to_string())?;
+                    .map_err(|e| {
+                        eprintln!("[stop_recording] ERROR downloading model: {}", e);
+                        e.to_string()
+                    })?;
+                eprintln!("[stop_recording] model download complete");
             }
-            whisper.transcribe(&wav_bytes).map_err(|e| e.to_string())?
+            let result = whisper.transcribe(&wav_bytes).map_err(|e| {
+                eprintln!("[stop_recording] ERROR local transcription: {}", e);
+                e.to_string()
+            })?;
+            eprintln!("[stop_recording] transcription: {:?}", result);
+            result
         }
     };
 
@@ -87,6 +135,7 @@ pub async fn stop_recording(
 
 #[tauri::command]
 pub async fn download_whisper_model(model: String, app: tauri::AppHandle) -> Result<(), String> {
+    eprintln!("[download_model] downloading model: {}", model);
     let whisper = crate::whisper::local::LocalWhisper::new(&model);
     let _ = app.emit("model-download-started", ());
     whisper
@@ -94,5 +143,10 @@ pub async fn download_whisper_model(model: String, app: tauri::AppHandle) -> Res
             emit_download_progress(&app, downloaded, total);
         })
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| {
+            eprintln!("[download_model] ERROR: {}", e);
+            e.to_string()
+        })?;
+    eprintln!("[download_model] complete");
+    Ok(())
 }

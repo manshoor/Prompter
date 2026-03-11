@@ -29,6 +29,10 @@ fn capture_context(app_handle: &tauri::AppHandle) {
 
     // 1. Get frontmost app (the source app, not Prompter)
     let source_app = focus::tracker::FocusTracker::get_frontmost_app().ok();
+    eprintln!(
+        "[capture] frontmost app: {:?}",
+        source_app.as_ref().map(|a| &a.name)
+    );
 
     // 2. Save current clipboard
     let _ = state.clipboard.lock().unwrap().save_current();
@@ -43,6 +47,11 @@ fn capture_context(app_handle: &tauri::AppHandle) {
 
     // 4. Read clipboard
     let selected_text = state.clipboard.lock().unwrap().read().unwrap_or_default();
+    eprintln!(
+        "[capture] selected text ({} chars): {:?}",
+        selected_text.len(),
+        selected_text.chars().take(100).collect::<String>()
+    );
 
     // 5. Store captured context for start_recording to use
     *state.captured_context.lock().unwrap() = Some(CapturedContext {
