@@ -62,6 +62,10 @@ pub struct AudioRecorder {
     stream: Mutex<Option<cpal::Stream>>,
     sample_rate: Mutex<u32>,
     channels: Mutex<u16>,
+    /// Timestamp (in samples) of the last chunk with audio above silence threshold
+    last_voice_sample: Arc<Mutex<u64>>,
+    /// Total samples received
+    total_samples: Arc<Mutex<u64>>,
 }
 
 // SAFETY: AudioRecorder fields are all protected by Mutex. The cpal::Stream is not Send/Sync
@@ -71,12 +75,17 @@ unsafe impl Send for AudioRecorder {}
 unsafe impl Sync for AudioRecorder {}
 
 impl AudioRecorder {
+    /// RMS threshold below which audio is considered silence
+    const SILENCE_RMS_THRESHOLD: f32 = 0.01;
+
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         Ok(Self {
             samples: Arc::new(Mutex::new(Vec::new())),
             stream: Mutex::new(None),
             sample_rate: Mutex::new(0),
             channels: Mutex::new(0),
+            last_voice_sample: Arc::new(Mutex::new(0)),
+            total_samples: Arc::new(Mutex::new(0)),
         })
     }
 
@@ -93,10 +102,23 @@ impl AudioRecorder {
         let samples = Arc::clone(&self.samples);
         samples.lock().unwrap().clear();
 
+        let last_voice = Arc::clone(&self.last_voice_sample);
+        let total = Arc::clone(&self.total_samples);
+        *last_voice.lock().unwrap() = 0;
+        *total.lock().unwrap() = 0;
+
         let stream = device.build_input_stream(
             &config.into(),
             move |data: &[f32], _: &cpal::InputCallbackInfo| {
                 samples.lock().unwrap().extend_from_slice(data);
+
+                // Check if this chunk has voice (above silence threshold)
+                let rms = (data.iter().map(|s| s * s).sum::<f32>() / data.len() as f32).sqrt();
+                let mut total_count = total.lock().unwrap();
+                *total_count += data.len() as u64;
+                if rms > Self::SILENCE_RMS_THRESHOLD {
+                    *last_voice.lock().unwrap() = *total_count;
+                }
             },
             |err| eprintln!("Audio stream error: {}", err),
             None,
@@ -105,6 +127,18 @@ impl AudioRecorder {
         stream.play()?;
         *self.stream.lock().unwrap() = Some(stream);
         Ok(())
+    }
+
+    /// Returns how many seconds of silence have elapsed since the last detected voice.
+    pub fn silence_duration_secs(&self) -> f32 {
+        let sample_rate = *self.sample_rate.lock().unwrap();
+        if sample_rate == 0 {
+            return 0.0;
+        }
+        let total = *self.total_samples.lock().unwrap();
+        let last_voice = *self.last_voice_sample.lock().unwrap();
+        let silent_samples = total.saturating_sub(last_voice);
+        silent_samples as f32 / sample_rate as f32
     }
 
     pub fn stop(&self) -> Result<AudioData, Box<dyn std::error::Error>> {

@@ -13,7 +13,9 @@ pub async fn generate_prompt(
     eprintln!("[generate_prompt] called");
     eprintln!(
         "[generate_prompt] selected_text: {:?} ({} chars)",
-        selected_text.as_deref().map(|s| s.chars().take(80).collect::<String>()),
+        selected_text
+            .as_deref()
+            .map(|s| s.chars().take(80).collect::<String>()),
         selected_text.as_deref().map_or(0, |s| s.len())
     );
     eprintln!("[generate_prompt] spoken_intent: {:?}", spoken_intent);
@@ -43,7 +45,10 @@ pub async fn generate_prompt(
         .retrieve(key_name)
         .map_err(|e| e.to_string())?
         .ok_or_else(|| {
-            eprintln!("[generate_prompt] ERROR: {} API key not configured", provider);
+            eprintln!(
+                "[generate_prompt] ERROR: {} API key not configured",
+                provider
+            );
             format!("{} API key not configured", provider)
         })?;
 
@@ -65,10 +70,7 @@ pub async fn generate_prompt(
             e.to_string()
         })?;
 
-    eprintln!(
-        "[generate_prompt] success ({} chars)",
-        prompt.len()
-    );
+    eprintln!("[generate_prompt] success ({} chars)", prompt.len());
 
     // Save to history
     state

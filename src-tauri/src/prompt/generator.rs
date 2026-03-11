@@ -1,3 +1,4 @@
+use regex::Regex;
 use serde_json::json;
 
 const SYSTEM_PROMPT: &str = r#"You are a prompt engineer. The user has selected content from their coding tool and described what they want to do with it via voice.
@@ -10,6 +11,29 @@ Rules:
 - Structure the prompt for best AI response
 - Match the complexity of the request (simple ask = short prompt)
 - Output ONLY the prompt text, no explanations or meta-commentary"#;
+
+/// Redact API keys and secrets from text before sending to AI.
+fn redact_secrets(text: &str) -> String {
+    let patterns = [
+        // Anthropic API keys
+        r"sk-ant-[a-zA-Z0-9\-_]{20,}",
+        // OpenAI API keys
+        r"sk-[a-zA-Z0-9]{20,}",
+        // Generic secret/token patterns (key = "value" or key: value)
+        r#"(?i)(api[_-]?key|secret[_-]?key|access[_-]?token|auth[_-]?token)\s*[=:]\s*['"]?[a-zA-Z0-9\-_]{16,}['"]?"#,
+        // AWS keys
+        r"AKIA[0-9A-Z]{16}",
+        // GitHub tokens
+        r"gh[pousr]_[A-Za-z0-9_]{36,}",
+    ];
+    let mut result = text.to_string();
+    for pattern in &patterns {
+        if let Ok(re) = Regex::new(pattern) {
+            result = re.replace_all(&result, "[REDACTED]").to_string();
+        }
+    }
+    result
+}
 
 pub struct PromptGenerator {
     provider: String,
@@ -32,10 +56,12 @@ impl PromptGenerator {
     ) -> Vec<serde_json::Value> {
         let mut user_content = String::new();
         if let Some(text) = selected_text {
-            user_content.push_str(&format!("Selected text:\n```\n{}\n```\n\n", text));
+            let safe_text = redact_secrets(text);
+            user_content.push_str(&format!("Selected text:\n```\n{}\n```\n\n", safe_text));
         }
         let intent = spoken_intent.unwrap_or("help me with this");
-        user_content.push_str(&format!("User's spoken intent: {}\n\n", intent));
+        let safe_intent = redact_secrets(intent);
+        user_content.push_str(&format!("User's spoken intent: {}\n\n", safe_intent));
         user_content.push_str(&format!("Source app: {}", source_app));
 
         vec![
@@ -159,6 +185,37 @@ mod tests {
             .as_str()
             .unwrap()
             .contains("Selected text"));
+    }
+
+    #[test]
+    fn test_redact_anthropic_key() {
+        let text = "my key is sk-ant-api03-abcdefghijklmnopqrstuvwx and more";
+        let redacted = redact_secrets(text);
+        assert!(!redacted.contains("sk-ant-"));
+        assert!(redacted.contains("[REDACTED]"));
+        assert!(redacted.contains("and more"));
+    }
+
+    #[test]
+    fn test_redact_openai_key() {
+        let text = "OPENAI_KEY=sk-proj1234567890abcdefghij done";
+        let redacted = redact_secrets(text);
+        assert!(!redacted.contains("sk-proj"));
+        assert!(redacted.contains("[REDACTED]"));
+    }
+
+    #[test]
+    fn test_redact_generic_api_key() {
+        let text = r#"api_key = "abc123def456ghi789jkl012""#;
+        let redacted = redact_secrets(text);
+        assert!(redacted.contains("[REDACTED]"));
+    }
+
+    #[test]
+    fn test_no_false_redaction() {
+        let text = "fn hello_world() { println!(\"hi\"); }";
+        let redacted = redact_secrets(text);
+        assert_eq!(text, redacted);
     }
 
     #[test]

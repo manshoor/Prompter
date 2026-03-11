@@ -80,10 +80,7 @@ pub async fn stop_recording(
         .load()
         .map_err(|e| e.to_string())?;
 
-    eprintln!(
-        "[stop_recording] whisper mode: {:?}",
-        settings.whisper_mode
-    );
+    eprintln!("[stop_recording] whisper mode: {:?}", settings.whisper_mode);
 
     let transcription = match settings.whisper_mode {
         crate::settings::types::WhisperMode::Cloud => {
@@ -92,7 +89,10 @@ pub async fn stop_recording(
                 .retrieve("openai")
                 .map_err(|e| e.to_string())?
                 .ok_or("OpenAI API key not configured")?;
-            eprintln!("[stop_recording] using Cloud whisper (key: {}...)", &api_key[..8.min(api_key.len())]);
+            eprintln!(
+                "[stop_recording] using Cloud whisper (key: {}...)",
+                &api_key[..8.min(api_key.len())]
+            );
             let whisper = crate::whisper::cloud::CloudWhisper::new(api_key);
             let result = whisper.transcribe(&wav_bytes).await.map_err(|e| {
                 eprintln!("[stop_recording] ERROR cloud transcription: {}", e);
@@ -131,6 +131,11 @@ pub async fn stop_recording(
     };
 
     Ok(transcription)
+}
+
+#[tauri::command]
+pub fn get_silence_duration(state: State<'_, AppState>) -> Result<f32, String> {
+    Ok(state.audio_recorder.silence_duration_secs())
 }
 
 #[tauri::command]

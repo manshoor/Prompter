@@ -49,6 +49,23 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       const result = await invoke<string>("start_recording");
       const data = JSON.parse(result);
       set({ selectedText: data.selected_text, sourceApp: data.source_app });
+
+      // Start silence detection polling
+      const settings = await invoke<{ silence_threshold_secs: number; recording_mode: string }>("get_settings");
+      if (settings.recording_mode === "AutoDetect") {
+        const threshold = settings.silence_threshold_secs;
+        const pollInterval = setInterval(async () => {
+          if (get().state !== "recording") {
+            clearInterval(pollInterval);
+            return;
+          }
+          const silence = await invoke<number>("get_silence_duration");
+          if (silence >= threshold) {
+            clearInterval(pollInterval);
+            get().stopRecording();
+          }
+        }, 500);
+      }
     } catch (e) {
       set({ state: "error", error: String(e) });
     }
