@@ -34,6 +34,7 @@ export function FloatingWidget({ onOpenSettings }: Props) {
         )}
         {(state === "recording" ||
           state === "transcribing" ||
+          state === "downloading" ||
           state === "generating") && <RecordingView />}
         {state === "preview" && <PreviewView />}
         {state === "pasting" && (

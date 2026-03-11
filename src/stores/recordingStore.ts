@@ -1,10 +1,12 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 type RecordingState =
   | "idle"
   | "recording"
   | "transcribing"
+  | "downloading"
   | "generating"
   | "preview"
   | "pasting"
@@ -23,6 +25,7 @@ interface RecordingStore {
   generatedPrompt: string;
   sourceApp: SourceApp | null;
   error: string | null;
+  downloadProgress: number;
 
   startRecording: () => Promise<void>;
   stopRecording: () => Promise<void>;
@@ -38,6 +41,7 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
   generatedPrompt: "",
   sourceApp: null,
   error: null,
+  downloadProgress: 0,
 
   startRecording: async () => {
     try {
@@ -53,7 +57,26 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
   stopRecording: async () => {
     try {
       set({ state: "transcribing" });
+
+      // Listen for model download events (auto-download on first local use)
+      let unlistenStarted: UnlistenFn | null = null;
+      let unlistenProgress: UnlistenFn | null = null;
+
+      unlistenStarted = await listen("model-download-started", () => {
+        set({ state: "downloading", downloadProgress: 0 });
+      });
+      unlistenProgress = await listen<{ percent: number }>(
+        "model-download-progress",
+        (event) => {
+          set({ downloadProgress: event.payload.percent });
+        },
+      );
+
       const transcription = await invoke<string>("stop_recording");
+
+      unlistenStarted?.();
+      unlistenProgress?.();
+
       set({ transcription, state: "generating" });
       await get().generatePrompt();
     } catch (e) {
@@ -101,5 +124,6 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       generatedPrompt: "",
       sourceApp: null,
       error: null,
+      downloadProgress: 0,
     }),
 }));

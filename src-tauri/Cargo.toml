@@ -26,7 +26,8 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 arboard = "3"
 cpal = "0.15"
 whisper-rs = "0.12"
-reqwest = { version = "0.12", features = ["json", "multipart"] }
+reqwest = { version = "0.12", features = ["json", "multipart", "stream"] }
+futures-util = "0.3"
 tokio = { version = "1", features = ["full"] }
 hound = "3.5"
 chrono = "0.4"

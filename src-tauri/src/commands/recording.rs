@@ -1,6 +1,18 @@
 use crate::commands::settings::AppState;
 use crate::focus::tracker::FocusTracker;
-use tauri::State;
+use tauri::{Emitter, State};
+
+fn emit_download_progress(app: &tauri::AppHandle, downloaded: u64, total: u64) {
+    let percent = if total > 0 {
+        (downloaded as f64 / total as f64 * 100.0) as u32
+    } else {
+        0
+    };
+    let _ = app.emit(
+        "model-download-progress",
+        serde_json::json!({ "downloaded": downloaded, "total": total, "percent": percent }),
+    );
+}
 
 #[tauri::command]
 pub async fn start_recording(state: State<'_, AppState>) -> Result<String, String> {
@@ -39,7 +51,10 @@ pub async fn start_recording(state: State<'_, AppState>) -> Result<String, Strin
 }
 
 #[tauri::command]
-pub async fn stop_recording(state: State<'_, AppState>) -> Result<String, String> {
+pub async fn stop_recording(
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> Result<String, String> {
     let audio_data = state.audio_recorder.stop().map_err(|e| e.to_string())?;
     let wav_bytes = audio_data.to_wav_bytes().map_err(|e| e.to_string())?;
 
@@ -66,8 +81,11 @@ pub async fn stop_recording(state: State<'_, AppState>) -> Result<String, String
         crate::settings::types::WhisperMode::Local => {
             let whisper = crate::whisper::local::LocalWhisper::new(&settings.local_whisper_model);
             if !whisper.is_model_downloaded() {
+                let _ = app.emit("model-download-started", ());
                 whisper
-                    .download_model()
+                    .download_model_with_progress(|downloaded, total| {
+                        emit_download_progress(&app, downloaded, total);
+                    })
                     .await
                     .map_err(|e| e.to_string())?;
             }
@@ -79,7 +97,16 @@ pub async fn stop_recording(state: State<'_, AppState>) -> Result<String, String
 }
 
 #[tauri::command]
-pub async fn download_whisper_model(model: String) -> Result<(), String> {
+pub async fn download_whisper_model(
+    model: String,
+    app: tauri::AppHandle,
+) -> Result<(), String> {
     let whisper = crate::whisper::local::LocalWhisper::new(&model);
-    whisper.download_model().await.map_err(|e| e.to_string())
+    let _ = app.emit("model-download-started", ());
+    whisper
+        .download_model_with_progress(|downloaded, total| {
+            emit_download_progress(&app, downloaded, total);
+        })
+        .await
+        .map_err(|e| e.to_string())
 }

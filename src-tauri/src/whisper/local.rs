@@ -38,6 +38,18 @@ impl LocalWhisper {
 
     #[allow(dead_code)]
     pub async fn download_model(&self) -> Result<(), Box<dyn std::error::Error>> {
+        self.download_model_with_progress(|_, _| {}).await
+    }
+
+    pub async fn download_model_with_progress<F>(
+        &self,
+        on_progress: F,
+    ) -> Result<(), Box<dyn std::error::Error>>
+    where
+        F: Fn(u64, u64),
+    {
+        use std::io::Write;
+
         let path = PathBuf::from(Self::model_path(&self.model_name));
         if path.exists() {
             return Ok(());
@@ -46,8 +58,25 @@ impl LocalWhisper {
         let url = Self::model_url(&self.model_name);
         let client = reqwest::Client::new();
         let response = client.get(&url).send().await?;
-        let bytes = response.bytes().await?;
-        std::fs::write(&path, &bytes)?;
+
+        let total_size = response.content_length().unwrap_or(0);
+        let mut downloaded: u64 = 0;
+
+        let tmp_path = path.with_extension("bin.tmp");
+        let mut file = std::fs::File::create(&tmp_path)?;
+        let mut stream = response.bytes_stream();
+
+        use futures_util::StreamExt;
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk?;
+            file.write_all(&chunk)?;
+            downloaded += chunk.len() as u64;
+            on_progress(downloaded, total_size);
+        }
+        file.flush()?;
+        drop(file);
+
+        std::fs::rename(&tmp_path, &path)?;
         Ok(())
     }
 
