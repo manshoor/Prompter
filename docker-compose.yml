@@ -1,0 +1,19 @@
+services:
+  dev:
+    build:
+      context: .
+      target: dev
+    volumes:
+      - .:/app
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/app/src-tauri/target
+    command: bash -c "cd src-tauri && cargo test -- --test-threads=1"
+
+  ci:
+    build:
+      context: .
+      target: ci
+
+volumes:
+  cargo-cache:
+  target-cache:
