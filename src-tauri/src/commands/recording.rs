@@ -71,3 +71,9 @@ pub async fn stop_recording(state: State<'_, AppState>) -> Result<String, String
 
     Ok(transcription)
 }
+
+#[tauri::command]
+pub async fn download_whisper_model(model: String) -> Result<(), String> {
+    let whisper = crate::whisper::local::LocalWhisper::new(&model);
+    whisper.download_model().await.map_err(|e| e.to_string())
+}

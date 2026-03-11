@@ -55,7 +55,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-950">
-      <FloatingWidget />
+      <FloatingWidget onOpenSettings={() => setView("settings")} />
     </div>
   );
 }

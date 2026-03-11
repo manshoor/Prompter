@@ -97,7 +97,7 @@ export function SettingsPanel() {
         {/* API Keys */}
         <Section icon={<Key size={18} />} title="API Keys">
           <ApiKeyInput provider="openai" label="OpenAI API Key" />
-          <ApiKeyInput provider="anthropic" label="Anthropic API Key" />
+          <ApiKeyInput provider="claude" label="Claude API Key" />
         </Section>
 
         {/* Speech-to-Text */}

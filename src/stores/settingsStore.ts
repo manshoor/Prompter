@@ -28,9 +28,10 @@ interface SettingsState {
   loading: boolean;
   load: () => Promise<void>;
   save: (settings: AppSettings) => Promise<void>;
+  updateWhisperMode: (mode: WhisperMode) => Promise<void>;
 }
 
-export const useSettingsStore = create<SettingsState>((set) => ({
+export const useSettingsStore = create<SettingsState>((set, get) => ({
   settings: null,
   loading: true,
   load: async () => {
@@ -40,5 +41,14 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   save: async (settings: AppSettings) => {
     await invoke("save_settings", { settings });
     set({ settings });
+  },
+  updateWhisperMode: async (mode: WhisperMode) => {
+    let current = get().settings;
+    if (!current) {
+      current = await invoke<AppSettings>("get_settings");
+    }
+    const updated = { ...current, whisper_mode: mode };
+    await invoke("save_settings", { settings: updated });
+    set({ settings: updated, loading: false });
   },
 }));

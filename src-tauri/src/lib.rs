@@ -55,6 +55,7 @@ pub fn run() {
             commands::settings::delete_api_key,
             commands::recording::start_recording,
             commands::recording::stop_recording,
+            commands::recording::download_whisper_model,
             commands::prompt::generate_prompt,
             commands::prompt::paste_to_app,
             commands::prompt::get_prompt_history,

@@ -1,15 +1,20 @@
 import { useRecordingStore } from "../../stores/recordingStore";
 import { RecordingView } from "./RecordingView";
 import { PreviewView } from "./PreviewView";
+import { IdleView } from "./IdleView";
+import { Settings } from "lucide-react";
 
-export function FloatingWidget() {
+interface Props {
+  onOpenSettings: () => void;
+}
+
+export function FloatingWidget({ onOpenSettings }: Props) {
   const { state, error, reset } = useRecordingStore();
-
-  if (state === "idle") return null;
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-[480px] bg-gray-900 border border-gray-700 rounded-xl shadow-2xl">
+      <div className="relative w-[480px] bg-gray-900 border border-gray-700 rounded-xl shadow-2xl">
+        {state === "idle" && <IdleView onOpenSettings={onOpenSettings} />}
         {state === "error" && (
           <div className="flex flex-col gap-3 p-4">
             <div className="flex items-center gap-2">
@@ -35,6 +40,16 @@ export function FloatingWidget() {
           <div className="flex items-center justify-center p-6 text-sm text-gray-400">
             Pasting...
           </div>
+        )}
+        {/* Gear icon visible in non-idle states */}
+        {state !== "idle" && (
+          <button
+            onClick={onOpenSettings}
+            className="absolute top-3 right-3 p-1.5 text-gray-600 hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-800/50"
+            title="Settings"
+          >
+            <Settings size={14} />
+          </button>
         )}
       </div>
     </div>
