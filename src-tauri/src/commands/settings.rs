@@ -1,5 +1,6 @@
 use crate::audio::recorder::AudioRecorder;
 use crate::clipboard::manager::ClipboardManager;
+use crate::focus::tracker::AppInfo;
 use crate::keychain::macos::KeychainManager;
 use crate::settings::manager::SettingsManager;
 use crate::settings::types::AppSettings;
@@ -7,12 +8,18 @@ use crate::storage::database::Database;
 use std::sync::{Arc, Mutex};
 use tauri::State;
 
+pub struct CapturedContext {
+    pub selected_text: String,
+    pub source_app: Option<AppInfo>,
+}
+
 pub struct AppState {
     pub settings_manager: Mutex<SettingsManager>,
     pub keychain: KeychainManager,
     pub clipboard: Mutex<ClipboardManager>,
     pub audio_recorder: Arc<AudioRecorder>,
     pub db: Mutex<Database>,
+    pub captured_context: Mutex<Option<CapturedContext>>,
 }
 
 #[tauri::command]

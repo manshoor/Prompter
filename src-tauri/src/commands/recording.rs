@@ -16,35 +16,24 @@ fn emit_download_progress(app: &tauri::AppHandle, downloaded: u64, total: u64) {
 
 #[tauri::command]
 pub async fn start_recording(state: State<'_, AppState>) -> Result<String, String> {
-    // Capture frontmost app before we take focus
-    let app_info = FocusTracker::get_frontmost_app().map_err(|e| e.to_string())?;
+    // Read pre-captured context (captured by hotkey handler before window was shown)
+    let context = state.captured_context.lock().unwrap().take();
 
-    // Save current clipboard
-    state
-        .clipboard
-        .lock()
-        .unwrap()
-        .save_current()
-        .map_err(|e| e.to_string())?;
-
-    // Simulate Cmd+C to copy selection
-    std::process::Command::new("osascript")
-        .arg("-e")
-        .arg(r#"tell application "System Events" to keystroke "c" using command down"#)
-        .output()
-        .map_err(|e| e.to_string())?;
-
-    std::thread::sleep(std::time::Duration::from_millis(100));
-
-    // Read clipboard (selected text)
-    let selected_text = state.clipboard.lock().unwrap().read().unwrap_or_default();
+    let (selected_text, source_app) = match context {
+        Some(ctx) => (ctx.selected_text, ctx.source_app),
+        None => {
+            // Fallback: try to capture now (may not work if window has focus)
+            let app_info = FocusTracker::get_frontmost_app().ok();
+            (String::new(), app_info)
+        }
+    };
 
     // Start audio recording
     state.audio_recorder.start().map_err(|e| e.to_string())?;
 
     // Return source app info + selected text
     Ok(serde_json::json!({
-        "source_app": app_info,
+        "source_app": source_app,
         "selected_text": selected_text,
     })
     .to_string())
@@ -97,10 +86,7 @@ pub async fn stop_recording(
 }
 
 #[tauri::command]
-pub async fn download_whisper_model(
-    model: String,
-    app: tauri::AppHandle,
-) -> Result<(), String> {
+pub async fn download_whisper_model(model: String, app: tauri::AppHandle) -> Result<(), String> {
     let whisper = crate::whisper::local::LocalWhisper::new(&model);
     let _ = app.emit("model-download-started", ());
     whisper

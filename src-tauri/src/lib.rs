@@ -11,7 +11,7 @@ mod whisper;
 
 use audio::recorder::AudioRecorder;
 use clipboard::manager::ClipboardManager;
-use commands::settings::AppState;
+use commands::settings::{AppState, CapturedContext};
 use keychain::macos::KeychainManager;
 use settings::manager::SettingsManager;
 use std::sync::{Arc, Mutex};
@@ -21,6 +21,35 @@ use tauri::{
     tray::TrayIconBuilder,
     Emitter, Manager,
 };
+
+/// Capture selected text from the frontmost app BEFORE showing the Prompter window.
+/// This must run while the source app still has focus.
+fn capture_context(app_handle: &tauri::AppHandle) {
+    let state = app_handle.state::<AppState>();
+
+    // 1. Get frontmost app (the source app, not Prompter)
+    let source_app = focus::tracker::FocusTracker::get_frontmost_app().ok();
+
+    // 2. Save current clipboard
+    let _ = state.clipboard.lock().unwrap().save_current();
+
+    // 3. Simulate Cmd+C to copy selection from the source app
+    let _ = std::process::Command::new("osascript")
+        .arg("-e")
+        .arg(r#"tell application "System Events" to keystroke "c" using command down"#)
+        .output();
+
+    std::thread::sleep(std::time::Duration::from_millis(150));
+
+    // 4. Read clipboard
+    let selected_text = state.clipboard.lock().unwrap().read().unwrap_or_default();
+
+    // 5. Store captured context for start_recording to use
+    *state.captured_context.lock().unwrap() = Some(CapturedContext {
+        selected_text,
+        source_app,
+    });
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -46,6 +75,7 @@ pub fn run() {
             clipboard: Mutex::new(clipboard_manager),
             audio_recorder,
             db: Mutex::new(db2),
+            captured_context: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             commands::settings::get_settings,
@@ -75,6 +105,8 @@ pub fn run() {
                 .icon(app.default_window_icon().unwrap().clone())
                 .on_menu_event(move |app, event| match event.id.as_ref() {
                     "start" => {
+                        // Capture text BEFORE showing window
+                        capture_context(app);
                         let _ = app.emit("hotkey-triggered", ());
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.show();
@@ -112,6 +144,8 @@ pub fn run() {
                     app.global_shortcut()
                         .on_shortcut(shortcut, move |_app, _shortcut, event| {
                             if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                                // Capture text BEFORE showing window
+                                capture_context(&app_handle);
                                 let _ = app_handle.emit("hotkey-triggered", ());
                                 if let Some(window) = app_handle.get_webview_window("main") {
                                     let _ = window.show();

@@ -78,11 +78,21 @@ impl PromptGenerator {
             .json(&body)
             .send()
             .await?;
+
+        let status = response.status();
         let json: serde_json::Value = response.json().await?;
-        Ok(json["content"][0]["text"]
+
+        if !status.is_success() {
+            let err_msg = json["error"]["message"]
+                .as_str()
+                .unwrap_or("Unknown API error");
+            return Err(format!("Claude API error ({}): {}", status, err_msg).into());
+        }
+
+        json["content"][0]["text"]
             .as_str()
-            .unwrap_or("Failed to generate prompt")
-            .to_string())
+            .map(|s| s.to_string())
+            .ok_or_else(|| "Unexpected API response format".into())
     }
 
     async fn call_openai(
@@ -102,11 +112,21 @@ impl PromptGenerator {
             .json(&body)
             .send()
             .await?;
+
+        let status = response.status();
         let json: serde_json::Value = response.json().await?;
-        Ok(json["choices"][0]["message"]["content"]
+
+        if !status.is_success() {
+            let err_msg = json["error"]["message"]
+                .as_str()
+                .unwrap_or("Unknown API error");
+            return Err(format!("OpenAI API error ({}): {}", status, err_msg).into());
+        }
+
+        json["choices"][0]["message"]["content"]
             .as_str()
-            .unwrap_or("Failed to generate prompt")
-            .to_string())
+            .map(|s| s.to_string())
+            .ok_or_else(|| "Unexpected API response format".into())
     }
 }
 
