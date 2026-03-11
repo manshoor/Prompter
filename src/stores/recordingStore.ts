@@ -7,7 +7,8 @@ type RecordingState =
   | "transcribing"
   | "generating"
   | "preview"
-  | "pasting";
+  | "pasting"
+  | "error";
 
 interface SourceApp {
   bundle_id: string;
@@ -45,7 +46,7 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       const data = JSON.parse(result);
       set({ selectedText: data.selected_text, sourceApp: data.source_app });
     } catch (e) {
-      set({ state: "idle", error: String(e) });
+      set({ state: "error", error: String(e) });
     }
   },
 
@@ -56,7 +57,7 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       set({ transcription, state: "generating" });
       await get().generatePrompt();
     } catch (e) {
-      set({ state: "idle", error: String(e) });
+      set({ state: "error", error: String(e) });
     }
   },
 
@@ -71,7 +72,7 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       });
       set({ generatedPrompt: prompt, state: "preview" });
     } catch (e) {
-      set({ state: "idle", error: String(e) });
+      set({ state: "error", error: String(e) });
     }
   },
 
@@ -88,7 +89,7 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       set({ state: "idle" });
       get().reset();
     } catch (e) {
-      set({ state: "idle", error: String(e) });
+      set({ state: "error", error: String(e) });
     }
   },
 
