@@ -86,6 +86,9 @@ pub async fn stop_recording(
         crate::settings::types::WhisperMode::Cloud => {
             let db_key = "api_key_openai";
             let api_key = if let Ok(Some(key)) = state.db.lock().unwrap().get_setting(db_key) {
+                if key.is_empty() {
+                    return Err("OpenAI API key not configured".to_string());
+                }
                 key
             } else if let Ok(Some(key)) = state.keychain.retrieve("openai") {
                 // Migrate to database for future reliability

@@ -18,7 +18,7 @@ NPM     := npm
 
 .PHONY: help setup install \
         dev build \
-        test test-rust test-frontend \
+        test test-rust test-frontend smoke-test \
         fmt lint check clippy \
         docker-build docker-test docker-check docker-ci \
         clean clean-all clean-docker \
@@ -85,6 +85,9 @@ test: ## [TEST] Run all Rust tests
 	@echo "$(GREEN)Tests passed$(NC)"
 
 test-rust: test ## [TEST] Alias for test
+
+smoke-test: ## [TEST] Verify build artifacts exist and are valid
+	@bash scripts/smoke-test.sh
 
 test-frontend: ## [TEST] TypeScript type check + frontend build
 	@echo "$(BLUE)Building frontend...$(NC)"

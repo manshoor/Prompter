@@ -4,9 +4,9 @@ mod commands;
 mod focus;
 mod hotkey;
 mod keychain;
-mod prompt;
-mod settings;
-mod storage;
+pub mod prompt;
+pub mod settings;
+pub mod storage;
 mod whisper;
 
 use audio::recorder::AudioRecorder;

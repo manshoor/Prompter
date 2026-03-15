@@ -42,6 +42,9 @@ pub async fn generate_prompt(
 
     let db_key = format!("api_key_{}", key_name);
     let api_key = if let Ok(Some(key)) = state.db.lock().unwrap().get_setting(&db_key) {
+        if key.is_empty() {
+            return Err(format!("{} API key not configured", provider));
+        }
         key
     } else if let Ok(Some(key)) = state.keychain.retrieve(key_name) {
         // Migrate to database for future reliability

@@ -62,7 +62,9 @@ pub fn get_api_key(state: State<AppState>, provider: String) -> Result<Option<St
     let db_key = format!("api_key_{}", provider);
     // Try database first (reliable)
     if let Ok(Some(key)) = state.db.lock().unwrap().get_setting(&db_key) {
-        return Ok(Some(key));
+        if !key.is_empty() {
+            return Ok(Some(key));
+        }
     }
     // Fall back to keychain (may fail after rebuild)
     match state.keychain.retrieve(&provider) {
@@ -84,7 +86,7 @@ pub fn delete_api_key(state: State<AppState>, provider: String) -> Result<(), St
         .db
         .lock()
         .unwrap()
-        .set_setting(&db_key, "")
+        .delete_setting(&db_key)
         .map_err(|e| e.to_string())?;
     // Also delete from keychain (best-effort)
     let _ = state.keychain.delete(&provider);
