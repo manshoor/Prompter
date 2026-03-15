@@ -1,6 +1,5 @@
 #!/bin/bash
 # Smoke test: verify build artifacts exist and are valid
-set -e
 
 PASS=0
 FAIL=0
@@ -8,10 +7,10 @@ FAIL=0
 check() {
     if eval "$2"; then
         echo "PASS: $1"
-        ((PASS++))
+        PASS=$((PASS + 1))
     else
         echo "FAIL: $1"
-        ((FAIL++))
+        FAIL=$((FAIL + 1))
     fi
 }
 
@@ -26,7 +25,7 @@ if [ -n "$DMG_PATH" ]; then
 fi
 
 # Check binary exists
-APP_BINARY="src-tauri/target/release/Prompter"
+APP_BINARY="src-tauri/target/release/prompter"
 check "Release binary exists" '[ -f "$APP_BINARY" ]'
 
 # Check binary is valid Mach-O
