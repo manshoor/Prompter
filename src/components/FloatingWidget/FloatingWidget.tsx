@@ -6,15 +6,16 @@ import { Settings } from "lucide-react";
 
 interface Props {
   onOpenSettings: () => void;
+  onOpenHistory: () => void;
 }
 
-export function FloatingWidget({ onOpenSettings }: Props) {
+export function FloatingWidget({ onOpenSettings, onOpenHistory }: Props) {
   const { state, error, reset } = useRecordingStore();
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="relative w-[480px] bg-gray-900 border border-gray-700 rounded-xl shadow-2xl">
-        {state === "idle" && <IdleView onOpenSettings={onOpenSettings} />}
+        {state === "idle" && <IdleView onOpenSettings={onOpenSettings} onOpenHistory={onOpenHistory} />}
         {state === "error" && (
           <div className="flex flex-col gap-3 p-4">
             <div className="flex items-center gap-2">
