@@ -42,6 +42,9 @@ impl FocusTracker {
     }
 
     pub fn activate_app(bundle_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+        if !bundle_id.chars().all(|c| c.is_alphanumeric() || c == '.' || c == '-' || c == '_') {
+            return Err("Invalid bundle ID".into());
+        }
         Command::new("osascript")
             .arg("-e")
             .arg(format!(

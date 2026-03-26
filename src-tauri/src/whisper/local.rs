@@ -56,7 +56,10 @@ impl LocalWhisper {
         }
         std::fs::create_dir_all(path.parent().unwrap())?;
         let url = Self::model_url(&self.model_name);
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(600))
+            .build()
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
         let response = client.get(&url).send().await?;
 
         let total_size = response.content_length().unwrap_or(0);
@@ -67,15 +70,23 @@ impl LocalWhisper {
         let mut stream = response.bytes_stream();
 
         use futures_util::StreamExt;
-        while let Some(chunk) = stream.next().await {
-            let chunk = chunk?;
-            file.write_all(&chunk)?;
-            downloaded += chunk.len() as u64;
-            on_progress(downloaded, total_size);
-        }
-        file.flush()?;
-        drop(file);
+        let result: Result<(), Box<dyn std::error::Error>> = async {
+            while let Some(chunk) = stream.next().await {
+                let chunk = chunk?;
+                file.write_all(&chunk)?;
+                downloaded += chunk.len() as u64;
+                on_progress(downloaded, total_size);
+            }
+            file.flush()?;
+            Ok(())
+        }.await;
 
+        if let Err(e) = result {
+            let _ = std::fs::remove_file(&tmp_path);
+            return Err(e);
+        }
+
+        drop(file);
         std::fs::rename(&tmp_path, &path)?;
         Ok(())
     }

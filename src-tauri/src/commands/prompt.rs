@@ -21,10 +21,14 @@ pub async fn generate_prompt(
     eprintln!("[generate_prompt] spoken_intent: {:?}", spoken_intent);
     eprintln!("[generate_prompt] source_app: {}", source_app);
 
+    if selected_text.as_deref().map_or(0, |s| s.len()) > 100_000 {
+        return Err("Selected text too large (max 100KB)".to_string());
+    }
+
     let settings = state
         .settings_manager
         .lock()
-        .unwrap()
+        .map_err(|_| "Internal lock error".to_string())?
         .load()
         .map_err(|e| e.to_string())?;
 
@@ -41,14 +45,15 @@ pub async fn generate_prompt(
     );
 
     let db_key = format!("api_key_{}", key_name);
-    let api_key = if let Ok(Some(key)) = state.db.lock().unwrap().get_setting(&db_key) {
+    let db_result = state.db.lock().map_err(|_| "Internal lock error".to_string())?.get_setting(&db_key);
+    let api_key = if let Ok(Some(key)) = db_result {
         if key.is_empty() {
             return Err(format!("{} API key not configured", provider));
         }
         key
     } else if let Ok(Some(key)) = state.keychain.retrieve(key_name) {
         // Migrate to database for future reliability
-        let _ = state.db.lock().unwrap().set_setting(&db_key, &key);
+        let _ = state.db.lock().map_err(|_| "Internal lock error".to_string())?.set_setting(&db_key, &key);
         key
     } else {
         eprintln!(
@@ -58,10 +63,7 @@ pub async fn generate_prompt(
         return Err(format!("{} API key not configured", provider));
     };
 
-    eprintln!(
-        "[generate_prompt] API key found ({}...)",
-        &api_key[..8.min(api_key.len())]
-    );
+    eprintln!("[generate_prompt] API key configured");
 
     let generator = PromptGenerator::new(provider, &api_key);
     let prompt = generator
@@ -82,7 +84,7 @@ pub async fn generate_prompt(
     state
         .db
         .lock()
-        .unwrap()
+        .map_err(|_| "Internal lock error".to_string())?
         .save_prompt(
             selected_text.as_deref().unwrap_or(""),
             spoken_intent.as_deref().unwrap_or(""),
@@ -103,7 +105,7 @@ pub async fn paste_to_app(
     state
         .clipboard
         .lock()
-        .unwrap()
+        .map_err(|_| "Internal lock error".to_string())?
         .write(&text)
         .map_err(|e| e.to_string())?;
 
@@ -120,7 +122,7 @@ pub async fn paste_to_app(
     state
         .clipboard
         .lock()
-        .unwrap()
+        .map_err(|_| "Internal lock error".to_string())?
         .restore()
         .map_err(|e| e.to_string())?;
 
@@ -132,7 +134,7 @@ pub fn copy_to_clipboard(state: State<AppState>, text: String) -> Result<(), Str
     state
         .clipboard
         .lock()
-        .unwrap()
+        .map_err(|_| "Internal lock error".to_string())?
         .write(&text)
         .map_err(|e| e.to_string())
 }
@@ -142,7 +144,7 @@ pub fn get_prompt_history(state: State<AppState>, limit: i64) -> Result<String, 
     let history = state
         .db
         .lock()
-        .unwrap()
+        .map_err(|_| "Internal lock error".to_string())?
         .list_prompts(limit, 0)
         .map_err(|e| e.to_string())?;
     serde_json::to_string(&history).map_err(|e| e.to_string())

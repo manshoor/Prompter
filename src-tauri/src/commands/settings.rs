@@ -27,7 +27,7 @@ pub fn get_settings(state: State<AppState>) -> Result<AppSettings, String> {
     state
         .settings_manager
         .lock()
-        .unwrap()
+        .map_err(|_| "Internal lock error".to_string())?
         .load()
         .map_err(|e| e.to_string())
 }
@@ -37,7 +37,7 @@ pub fn save_settings(state: State<AppState>, settings: AppSettings) -> Result<()
     state
         .settings_manager
         .lock()
-        .unwrap()
+        .map_err(|_| "Internal lock error".to_string())?
         .save(&settings)
         .map_err(|e| e.to_string())
 }
@@ -49,7 +49,7 @@ pub fn store_api_key(state: State<AppState>, provider: String, key: String) -> R
     state
         .db
         .lock()
-        .unwrap()
+        .map_err(|_| "Internal lock error".to_string())?
         .set_setting(&db_key, &key)
         .map_err(|e| e.to_string())?;
     // Also store in keychain (best-effort, may fail on dev rebuilds)
@@ -61,7 +61,8 @@ pub fn store_api_key(state: State<AppState>, provider: String, key: String) -> R
 pub fn get_api_key(state: State<AppState>, provider: String) -> Result<Option<String>, String> {
     let db_key = format!("api_key_{}", provider);
     // Try database first (reliable)
-    if let Ok(Some(key)) = state.db.lock().unwrap().get_setting(&db_key) {
+    let db_result = state.db.lock().map_err(|_| "Internal lock error".to_string())?.get_setting(&db_key);
+    if let Ok(Some(key)) = db_result {
         if !key.is_empty() {
             return Ok(Some(key));
         }
@@ -70,7 +71,7 @@ pub fn get_api_key(state: State<AppState>, provider: String) -> Result<Option<St
     match state.keychain.retrieve(&provider) {
         Ok(Some(key)) => {
             // Migrate to database for future reliability
-            let _ = state.db.lock().unwrap().set_setting(&db_key, &key);
+            let _ = state.db.lock().map_err(|_| "Internal lock error".to_string())?.set_setting(&db_key, &key);
             Ok(Some(key))
         }
         Ok(None) => Ok(None),
@@ -85,7 +86,7 @@ pub fn delete_api_key(state: State<AppState>, provider: String) -> Result<(), St
     state
         .db
         .lock()
-        .unwrap()
+        .map_err(|_| "Internal lock error".to_string())?
         .delete_setting(&db_key)
         .map_err(|e| e.to_string())?;
     // Also delete from keychain (best-effort)

@@ -19,7 +19,7 @@ pub async fn start_recording(state: State<'_, AppState>) -> Result<String, Strin
     eprintln!("[start_recording] called");
 
     // Read pre-captured context (captured by hotkey handler before window was shown)
-    let context = state.captured_context.lock().unwrap().take();
+    let context = state.captured_context.lock().map_err(|_| "Internal lock error".to_string())?.take();
 
     let (selected_text, source_app) = match context {
         Some(ctx) => {
@@ -76,7 +76,7 @@ pub async fn stop_recording(
     let settings = state
         .settings_manager
         .lock()
-        .unwrap()
+        .map_err(|_| "Internal lock error".to_string())?
         .load()
         .map_err(|e| e.to_string())?;
 
@@ -85,22 +85,20 @@ pub async fn stop_recording(
     let transcription = match settings.whisper_mode {
         crate::settings::types::WhisperMode::Cloud => {
             let db_key = "api_key_openai";
-            let api_key = if let Ok(Some(key)) = state.db.lock().unwrap().get_setting(db_key) {
+            let db_result = state.db.lock().map_err(|_| "Internal lock error".to_string())?.get_setting(db_key);
+            let api_key = if let Ok(Some(key)) = db_result {
                 if key.is_empty() {
                     return Err("OpenAI API key not configured".to_string());
                 }
                 key
             } else if let Ok(Some(key)) = state.keychain.retrieve("openai") {
                 // Migrate to database for future reliability
-                let _ = state.db.lock().unwrap().set_setting(db_key, &key);
+                let _ = state.db.lock().map_err(|_| "Internal lock error".to_string())?.set_setting(db_key, &key);
                 key
             } else {
                 return Err("OpenAI API key not configured".to_string());
             };
-            eprintln!(
-                "[stop_recording] using Cloud whisper (key: {}...)",
-                &api_key[..8.min(api_key.len())]
-            );
+            eprintln!("[stop_recording] API key configured");
             let whisper = crate::whisper::cloud::CloudWhisper::new(api_key);
             let result = whisper.transcribe(&wav_bytes).await.map_err(|e| {
                 eprintln!("[stop_recording] ERROR cloud transcription: {}", e);

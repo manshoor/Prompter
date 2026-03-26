@@ -77,7 +77,10 @@ impl PromptGenerator {
         source_app: &str,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let messages = self.build_messages(selected_text, spoken_intent, source_app);
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(60))
+            .build()
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
         match self.provider.as_str() {
             "claude" => self.call_claude(&client, &messages).await,
             "openai" => self.call_openai(&client, &messages).await,

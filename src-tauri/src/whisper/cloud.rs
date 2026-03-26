@@ -23,7 +23,10 @@ impl CloudWhisper {
             .text("model", "whisper-1")
             .part("file", file_part);
 
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(60))
+            .build()
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
         let response = client
             .post("https://api.openai.com/v1/audio/transcriptions")
             .header("Authorization", format!("Bearer {}", self.api_key))

@@ -144,7 +144,7 @@ impl AudioRecorder {
     pub fn stop(&self) -> Result<AudioData, Box<dyn std::error::Error>> {
         *self.stream.lock().unwrap() = None;
 
-        let samples = self.samples.lock().unwrap().clone();
+        let samples = std::mem::take(&mut *self.samples.lock().unwrap());
         let sample_rate = *self.sample_rate.lock().unwrap();
         let channels = *self.channels.lock().unwrap();
 
