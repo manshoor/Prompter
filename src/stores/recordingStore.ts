@@ -123,7 +123,13 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
         spokenIntent: transcription || null,
         sourceApp: sourceApp?.name || "Unknown",
       });
-      set({ generatedPrompt: prompt, state: "preview" });
+      const settings = await invoke<{ paste_mode: string }>("get_settings");
+      if (settings.paste_mode === "Auto") {
+        set({ generatedPrompt: prompt });
+        await get().pastePrompt(prompt);
+      } else {
+        set({ generatedPrompt: prompt, state: "preview" });
+      }
     } catch (e) {
       set({ state: "error", error: String(e) });
       setTimeout(() => {
