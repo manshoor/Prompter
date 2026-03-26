@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { ApiKeyInput } from "../SettingsPanel/ApiKeyInput";
 import { useSettingsStore, type WhisperMode } from "../../stores/settingsStore";
@@ -12,7 +12,12 @@ export function Onboarding({ onComplete }: Props) {
   const [whisperMode, setWhisperMode] = useState<WhisperMode>("Cloud");
   const [downloadStatus, setDownloadStatus] = useState<"idle" | "downloading" | "done" | "error">("idle");
   const [downloadError, setDownloadError] = useState("");
-  const { updateWhisperMode } = useSettingsStore();
+  const { settings, updateWhisperMode } = useSettingsStore();
+
+  const hotkey = useMemo(() => {
+    const raw = settings?.global_hotkey ?? "CmdOrCtrl+Shift+P";
+    return raw.replace("CmdOrCtrl", "Cmd");
+  }, [settings?.global_hotkey]);
 
   const handleWhisperSelect = async (mode: WhisperMode) => {
     setWhisperMode(mode);
@@ -61,7 +66,7 @@ export function Onboarding({ onComplete }: Props) {
           <p className="text-sm text-gray-400">
             Select text in any app, press{" "}
             <kbd className="px-2 py-0.5 bg-gray-800 border border-gray-700 rounded text-xs">
-              Cmd+Shift+P
+              {hotkey}
             </kbd>
             , speak your intent, and get a ready-to-use prompt.
           </p>
@@ -204,7 +209,7 @@ export function Onboarding({ onComplete }: Props) {
           <p>
             Press{" "}
             <kbd className="px-2 py-0.5 bg-gray-800 border border-gray-700 rounded text-xs">
-              Cmd+Shift+P
+              {hotkey}
             </kbd>{" "}
             anywhere to start recording.
           </p>

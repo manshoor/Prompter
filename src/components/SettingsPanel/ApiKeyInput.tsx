@@ -10,6 +10,7 @@ export function ApiKeyInput({ provider, label }: Props) {
   const [key, setKey] = useState("");
   const [saved, setSaved] = useState(false);
   const [hasKey, setHasKey] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     invoke<string | null>("get_api_key", { provider }).then((existing) => {
@@ -17,23 +18,35 @@ export function ApiKeyInput({ provider, label }: Props) {
         setHasKey(true);
         setKey("••••••••••••••••");
       }
+    }).catch(() => {
+      setError("Failed to load API key");
     });
   }, [provider]);
 
   const handleSave = async () => {
     if (key && !key.startsWith("••")) {
-      await invoke("store_api_key", { provider, key });
-      setHasKey(true);
-      setSaved(true);
-      setKey("••••••••••••••••");
-      setTimeout(() => setSaved(false), 2000);
+      try {
+        setError(null);
+        await invoke("store_api_key", { provider, key });
+        setHasKey(true);
+        setSaved(true);
+        setKey("••••••••••••••••");
+        setTimeout(() => setSaved(false), 2000);
+      } catch (e) {
+        setError("Failed to save API key");
+      }
     }
   };
 
   const handleDelete = async () => {
-    await invoke("delete_api_key", { provider });
-    setHasKey(false);
-    setKey("");
+    try {
+      setError(null);
+      await invoke("delete_api_key", { provider });
+      setHasKey(false);
+      setKey("");
+    } catch (e) {
+      setError("Failed to remove API key");
+    }
   };
 
   return (
@@ -45,7 +58,7 @@ export function ApiKeyInput({ provider, label }: Props) {
         <input
           type="password"
           value={key}
-          onChange={(e) => setKey(e.target.value)}
+          onChange={(e) => { setKey(e.target.value); setError(null); }}
           placeholder={`Enter ${label}`}
           onFocus={() => {
             if (hasKey) setKey("");
@@ -68,6 +81,9 @@ export function ApiKeyInput({ provider, label }: Props) {
           </button>
         )}
       </div>
+      {error && (
+        <p className="mt-1 text-xs text-red-400">{error}</p>
+      )}
     </div>
   );
 }

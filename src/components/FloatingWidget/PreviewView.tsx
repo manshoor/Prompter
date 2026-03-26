@@ -5,6 +5,17 @@ import { useRecordingStore } from "../../stores/recordingStore";
 export function PreviewView() {
   const { generatedPrompt, pastePrompt, reset } = useRecordingStore();
   const [editedPrompt, setEditedPrompt] = useState(generatedPrompt);
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
+
+  const handleCopy = async () => {
+    try {
+      await invoke("copy_to_clipboard", { text: editedPrompt });
+      setCopyStatus("Copied!");
+    } catch {
+      setCopyStatus("Failed");
+    }
+    setTimeout(() => setCopyStatus(null), 2000);
+  };
 
   return (
     <div className="flex flex-col gap-3 p-4">
@@ -23,10 +34,10 @@ export function PreviewView() {
           Paste to App
         </button>
         <button
-          onClick={() => invoke("copy_to_clipboard", { text: editedPrompt })}
+          onClick={handleCopy}
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-sm transition-colors"
         >
-          Copy
+          {copyStatus ?? "Copy"}
         </button>
         <button
           onClick={reset}

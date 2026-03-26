@@ -1,10 +1,24 @@
+import { useEffect } from "react";
 import { Settings } from "lucide-react";
+import { useSettingsStore } from "../../stores/settingsStore";
 
 interface Props {
   onOpenSettings: () => void;
 }
 
 export function IdleView({ onOpenSettings }: Props) {
+  const { settings, load } = useSettingsStore();
+
+  useEffect(() => {
+    if (!settings) {
+      load();
+    }
+  }, [settings, load]);
+
+  const hotkey = settings?.global_hotkey
+    ? settings.global_hotkey.replace("CmdOrCtrl", "Cmd")
+    : "Cmd+Shift+P";
+
   return (
     <div className="relative flex flex-col items-center justify-center gap-4 p-8">
       <button
@@ -18,7 +32,7 @@ export function IdleView({ onOpenSettings }: Props) {
       <p className="text-sm text-gray-500">
         Press{" "}
         <kbd className="px-2 py-0.5 bg-gray-800 border border-gray-700 rounded text-xs text-gray-300">
-          Cmd+Shift+P
+          {hotkey}
         </kbd>{" "}
         to start
       </p>

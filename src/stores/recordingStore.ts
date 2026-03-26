@@ -26,6 +26,7 @@ interface RecordingStore {
   sourceApp: SourceApp | null;
   error: string | null;
   downloadProgress: number;
+  silenceInterval: ReturnType<typeof setInterval> | null;
 
   startRecording: () => Promise<void>;
   stopRecording: () => Promise<void>;
@@ -42,6 +43,7 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
   sourceApp: null,
   error: null,
   downloadProgress: 0,
+  silenceInterval: null,
 
   startRecording: async () => {
     try {
@@ -57,23 +59,31 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
         const pollInterval = setInterval(async () => {
           if (get().state !== "recording") {
             clearInterval(pollInterval);
+            set({ silenceInterval: null });
             return;
           }
           const silence = await invoke<number>("get_silence_duration");
           if (silence >= threshold) {
             clearInterval(pollInterval);
+            set({ silenceInterval: null });
             get().stopRecording();
           }
         }, 500);
+        set({ silenceInterval: pollInterval });
       }
     } catch (e) {
       set({ state: "error", error: String(e) });
+      setTimeout(() => {
+        if (get().state === "error") get().reset();
+      }, 15_000);
     }
   },
 
   stopRecording: async () => {
     try {
-      set({ state: "transcribing" });
+      const interval = get().silenceInterval;
+      if (interval) clearInterval(interval);
+      set({ state: "transcribing", silenceInterval: null });
 
       // Listen for model download events (auto-download on first local use)
       let unlistenStarted: UnlistenFn | null = null;
@@ -98,6 +108,9 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       await get().generatePrompt();
     } catch (e) {
       set({ state: "error", error: String(e) });
+      setTimeout(() => {
+        if (get().state === "error") get().reset();
+      }, 15_000);
     }
   },
 
@@ -113,6 +126,9 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       set({ generatedPrompt: prompt, state: "preview" });
     } catch (e) {
       set({ state: "error", error: String(e) });
+      setTimeout(() => {
+        if (get().state === "error") get().reset();
+      }, 15_000);
     }
   },
 
@@ -130,10 +146,15 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       get().reset();
     } catch (e) {
       set({ state: "error", error: String(e) });
+      setTimeout(() => {
+        if (get().state === "error") get().reset();
+      }, 15_000);
     }
   },
 
-  reset: () =>
+  reset: () => {
+    const interval = get().silenceInterval;
+    if (interval) clearInterval(interval);
     set({
       state: "idle",
       selectedText: "",
@@ -142,5 +163,7 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       sourceApp: null,
       error: null,
       downloadProgress: 0,
-    }),
+      silenceInterval: null,
+    });
+  },
 }));

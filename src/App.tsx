@@ -13,7 +13,7 @@ function App() {
   useEffect(() => {
     invoke<boolean>("is_first_run").then((isFirst) => {
       setView(isFirst ? "onboarding" : "widget");
-    });
+    }).catch(() => setView("widget"));
   }, []);
 
   useEffect(() => {
