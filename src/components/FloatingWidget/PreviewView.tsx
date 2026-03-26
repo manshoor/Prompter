@@ -19,12 +19,12 @@ export function PreviewView() {
 
   return (
     <div className="flex flex-col gap-3 p-4">
-      <h3 className="text-sm font-medium text-gray-300">Generated Prompt</h3>
+      <h3 className="text-sm font-medium text-gray-600 dark:text-gray-300">Generated Prompt</h3>
       <textarea
         value={editedPrompt}
         onChange={(e) => setEditedPrompt(e.target.value)}
         rows={8}
-        className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-200 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-200 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <div className="flex gap-2">
         <button
@@ -35,13 +35,13 @@ export function PreviewView() {
         </button>
         <button
           onClick={handleCopy}
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-sm transition-colors"
+          className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm transition-colors"
         >
           {copyStatus ?? "Copy"}
         </button>
         <button
           onClick={reset}
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-sm transition-colors"
+          className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm transition-colors"
         >
           Cancel
         </button>

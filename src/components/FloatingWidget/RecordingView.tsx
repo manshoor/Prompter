@@ -7,8 +7,8 @@ export function RecordingView() {
     <div className="flex flex-col items-center gap-4 p-6">
       {state === "downloading" ? (
         <>
-          <span className="text-sm text-gray-300">Downloading Whisper model...</span>
-          <div className="w-full bg-gray-800 rounded-full h-2">
+          <span className="text-sm text-gray-600 dark:text-gray-300">Downloading Whisper model...</span>
+          <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-2">
             <div
               className="bg-blue-500 h-2 rounded-full transition-all duration-300"
               style={{ width: `${downloadProgress}%` }}
@@ -20,7 +20,7 @@ export function RecordingView() {
         <>
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 bg-red-500 rounded-full animate-recording" />
-            <span className="text-sm text-gray-300">
+            <span className="text-sm text-gray-600 dark:text-gray-300">
               {state === "recording" && "Recording... Speak your intent"}
               {state === "transcribing" && "Transcribing..."}
               {state === "generating" && "Generating prompt..."}

@@ -69,15 +69,15 @@ export function HistoryView({ onBack }: Props) {
   return (
     <div className="flex flex-col h-full max-h-[480px]">
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800 shrink-0">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 dark:border-gray-800 shrink-0">
         <button
           onClick={onBack}
-          className="p-1 text-gray-400 hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-800"
+          className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
           title="Back"
         >
           <ArrowLeft size={16} />
         </button>
-        <span className="text-sm font-medium text-gray-200">History</span>
+        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">History</span>
       </div>
 
       {/* Content */}
@@ -99,9 +99,9 @@ export function HistoryView({ onBack }: Props) {
             <button
               key={entry.id}
               onClick={() => handleCopy(entry)}
-              className="w-full text-left px-4 py-3 border-b border-gray-800/50 hover:bg-gray-800/50 transition-colors cursor-pointer"
+              className="w-full text-left px-4 py-3 border-b border-gray-200/50 dark:border-gray-800/50 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
             >
-              <p className="text-sm text-gray-200 leading-relaxed">
+              <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
                 {copiedId === entry.id
                   ? "Copied!"
                   : truncate(entry.generated_prompt, 80)}

@@ -25,23 +25,23 @@ export function IdleView({ onOpenSettings, onOpenHistory }: Props) {
       <div className="absolute top-3 right-3 flex items-center gap-1">
         <button
           onClick={onOpenHistory}
-          className="p-1.5 text-gray-500 hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-800"
+          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
           title="History"
         >
           <Clock size={16} />
         </button>
         <button
           onClick={onOpenSettings}
-          className="p-1.5 text-gray-500 hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-800"
+          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
           title="Settings"
         >
           <Settings size={16} />
         </button>
       </div>
-      <h1 className="text-lg font-semibold text-gray-200">Prompter</h1>
+      <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Prompter</h1>
       <p className="text-sm text-gray-500">
         Press{" "}
-        <kbd className="px-2 py-0.5 bg-gray-800 border border-gray-700 rounded text-xs text-gray-300">
+        <kbd className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs text-gray-600 dark:text-gray-300">
           {hotkey}
         </kbd>{" "}
         to start
