@@ -79,6 +79,33 @@ impl Database {
         Ok(self.conn.last_insert_rowid())
     }
 
+    pub fn delete_prompt(&self, id: i64) -> Result<()> {
+        self.conn
+            .execute("DELETE FROM prompt_history WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn search_prompts(&self, query: &str, limit: i64) -> Result<Vec<PromptRecord>> {
+        let pattern = format!("%{}%", query);
+        let mut stmt = self.conn.prepare(
+            "SELECT id, selected_text, spoken_intent, generated_prompt, source_app, created_at
+             FROM prompt_history
+             WHERE generated_prompt LIKE ?1 OR selected_text LIKE ?1 OR spoken_intent LIKE ?1
+             ORDER BY id DESC LIMIT ?2",
+        )?;
+        let records = stmt.query_map(params![pattern, limit], |row| {
+            Ok(PromptRecord {
+                id: row.get(0)?,
+                selected_text: row.get(1)?,
+                spoken_intent: row.get(2)?,
+                generated_prompt: row.get(3)?,
+                source_app: row.get(4)?,
+                created_at: row.get(5)?,
+            })
+        })?;
+        records.collect()
+    }
+
     pub fn list_prompts(&self, limit: i64, offset: i64) -> Result<Vec<PromptRecord>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, selected_text, spoken_intent, generated_prompt, source_app, created_at

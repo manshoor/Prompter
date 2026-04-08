@@ -1,5 +1,4 @@
 use crate::commands::settings::AppState;
-use crate::focus::tracker::FocusTracker;
 use tauri::{Emitter, State};
 
 fn emit_download_progress(app: &tauri::AppHandle, downloaded: u64, total: u64) {
@@ -14,42 +13,59 @@ fn emit_download_progress(app: &tauri::AppHandle, downloaded: u64, total: u64) {
     );
 }
 
+/// Returns pre-captured context (selected text + source app) without starting audio.
 #[tauri::command]
-pub async fn start_recording(state: State<'_, AppState>) -> Result<String, String> {
-    eprintln!("[start_recording] called");
+pub async fn get_captured_context(state: State<'_, AppState>) -> Result<String, String> {
+    eprintln!("[get_captured_context] called");
 
-    // Read pre-captured context (captured by hotkey handler before window was shown)
-    let context = state.captured_context.lock().map_err(|_| "Internal lock error".to_string())?.take();
+    let context = state
+        .captured_context
+        .lock()
+        .map_err(|_| "Internal lock error".to_string())?
+        .take();
 
     let (selected_text, source_app) = match context {
         Some(ctx) => {
             eprintln!(
-                "[start_recording] using pre-captured context: app={:?}, text={} chars",
+                "[get_captured_context] app={:?}, text={} chars",
                 ctx.source_app.as_ref().map(|a| &a.name),
                 ctx.selected_text.len()
             );
             (ctx.selected_text, ctx.source_app)
         }
         None => {
-            eprintln!("[start_recording] WARNING: no pre-captured context, using fallback");
-            let app_info = FocusTracker::get_frontmost_app().ok();
-            (String::new(), app_info)
+            eprintln!("[get_captured_context] WARNING: no pre-captured context");
+            (String::new(), None)
         }
     };
 
-    // Start audio recording
+    Ok(serde_json::json!({
+        "source_app": source_app,
+        "selected_text": selected_text,
+    })
+    .to_string())
+}
+
+/// Starts audio recording only (context should be fetched separately via get_captured_context).
+#[tauri::command]
+pub async fn start_recording(state: State<'_, AppState>) -> Result<(), String> {
+    eprintln!("[start_recording] called");
+
     state.audio_recorder.start().map_err(|e| {
         eprintln!("[start_recording] ERROR starting audio: {}", e);
         e.to_string()
     })?;
     eprintln!("[start_recording] audio recording started");
 
-    // Return source app info + selected text
-    Ok(serde_json::json!({
-        "source_app": source_app,
-        "selected_text": selected_text,
-    })
-    .to_string())
+    Ok(())
+}
+
+/// Stops any active recording without transcription.
+#[tauri::command]
+pub async fn skip_recording(state: State<'_, AppState>) -> Result<(), String> {
+    eprintln!("[skip_recording] called");
+    let _ = state.audio_recorder.stop();
+    Ok(())
 }
 
 #[tauri::command]
@@ -64,13 +80,41 @@ pub async fn stop_recording(
         e.to_string()
     })?;
 
+    // Check for empty/trivial audio — skip transcription if nothing meaningful was recorded
+    let sample_rate = audio_data.sample_rate.max(1) as f32;
+    let duration_secs = audio_data.samples.len() as f32 / sample_rate;
+    if audio_data.samples.is_empty() || duration_secs < 0.5 {
+        eprintln!(
+            "[stop_recording] trivial audio ({:.2}s), skipping transcription",
+            duration_secs
+        );
+        return Ok(String::new());
+    }
+
+    // Check if the entire recording is silence
+    let rms = (audio_data
+        .samples
+        .iter()
+        .map(|s| s * s)
+        .sum::<f32>()
+        / audio_data.samples.len() as f32)
+        .sqrt();
+    if rms < 0.01 {
+        eprintln!(
+            "[stop_recording] all silence (rms={:.4}), skipping transcription",
+            rms
+        );
+        return Ok(String::new());
+    }
+
     let wav_bytes = audio_data.to_wav_bytes().map_err(|e| {
         eprintln!("[stop_recording] ERROR converting to WAV: {}", e);
         e.to_string()
     })?;
     eprintln!(
-        "[stop_recording] audio captured: {} bytes WAV",
-        wav_bytes.len()
+        "[stop_recording] audio captured: {} bytes WAV, {:.1}s",
+        wav_bytes.len(),
+        duration_secs
     );
 
     let settings = state
@@ -142,6 +186,12 @@ pub async fn stop_recording(
 #[tauri::command]
 pub fn get_silence_duration(state: State<'_, AppState>) -> Result<f32, String> {
     Ok(state.audio_recorder.silence_duration_secs())
+}
+
+/// Returns the current audio RMS level (0.0–1.0) for the visualizer.
+#[tauri::command]
+pub fn get_audio_level(state: State<'_, AppState>) -> Result<f32, String> {
+    Ok(state.audio_recorder.current_rms())
 }
 
 #[tauri::command]

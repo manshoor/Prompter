@@ -22,9 +22,29 @@ use tauri::{
     Emitter, Manager,
 };
 
+#[tauri::command]
+fn hide_window(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window.hide().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn resize_window(app: tauri::AppHandle, width: f64, height: f64) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        use tauri::LogicalSize;
+        window
+            .set_size(LogicalSize::new(width, height))
+            .map_err(|e| e.to_string())?;
+        window.center().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 /// Capture selected text from the frontmost app BEFORE showing the Prompter window.
 /// This must run while the source app still has focus.
-fn capture_context(app_handle: &tauri::AppHandle) {
+pub fn capture_context(app_handle: &tauri::AppHandle) {
     let state = app_handle.state::<AppState>();
 
     // 1. Get frontmost app (the source app, not Prompter)
@@ -68,9 +88,10 @@ pub fn run() {
         .join("prompter.db");
     std::fs::create_dir_all(db_path.parent().unwrap()).unwrap();
 
-    let db = Database::new(db_path.to_str().unwrap()).unwrap();
-    let db2 = Database::new(db_path.to_str().unwrap()).unwrap();
-    let settings_manager = SettingsManager::new(db);
+    let db = Arc::new(Mutex::new(
+        Database::new(db_path.to_str().unwrap()).unwrap(),
+    ));
+    let settings_manager = SettingsManager::new(Arc::clone(&db));
     let keychain = KeychainManager::new("com.prompter.app");
     let clipboard_manager = ClipboardManager::new();
     let audio_recorder = Arc::new(AudioRecorder::new().unwrap());
@@ -83,22 +104,29 @@ pub fn run() {
             keychain,
             clipboard: Mutex::new(clipboard_manager),
             audio_recorder,
-            db: Mutex::new(db2),
+            db,
             captured_context: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
+            hide_window,
+            resize_window,
             commands::settings::get_settings,
             commands::settings::save_settings,
             commands::settings::store_api_key,
             commands::settings::get_api_key,
             commands::settings::delete_api_key,
+            commands::recording::get_captured_context,
             commands::recording::start_recording,
             commands::recording::stop_recording,
+            commands::recording::skip_recording,
             commands::recording::get_silence_duration,
+            commands::recording::get_audio_level,
             commands::recording::download_whisper_model,
             commands::prompt::generate_prompt,
             commands::prompt::paste_to_app,
             commands::prompt::copy_to_clipboard,
+            commands::prompt::delete_prompt,
+            commands::prompt::search_prompts,
             commands::prompt::get_prompt_history,
             commands::onboarding::is_first_run,
             commands::onboarding::complete_onboarding,
@@ -106,10 +134,17 @@ pub fn run() {
         .setup(|app| {
             // Build tray menu
             let start = MenuItem::with_id(app, "start", "Start Recording", true, None::<&str>)?;
-            let settings_item = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
-            let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let history_item =
+                MenuItem::with_id(app, "history", "Show History", true, None::<&str>)?;
+            let settings_item =
+                MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
+            let separator = tauri::menu::PredefinedMenuItem::separator(app)?;
+            let quit = MenuItem::with_id(app, "quit", "Quit Prompter", true, None::<&str>)?;
 
-            let menu = Menu::with_items(app, &[&start, &settings_item, &quit])?;
+            let menu = Menu::with_items(
+                app,
+                &[&start, &history_item, &settings_item, &separator, &quit],
+            )?;
 
             let _tray = TrayIconBuilder::new()
                 .menu(&menu)
@@ -119,6 +154,13 @@ pub fn run() {
                         // Capture text BEFORE showing window
                         capture_context(app);
                         let _ = app.emit("hotkey-triggered", ());
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    "history" => {
+                        let _ = app.emit("open-history", ());
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.show();
                             let _ = window.set_focus();

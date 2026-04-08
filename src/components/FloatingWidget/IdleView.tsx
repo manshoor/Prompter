@@ -17,35 +17,44 @@ export function IdleView({ onOpenSettings, onOpenHistory }: Props) {
   }, [settings, load]);
 
   const hotkey = settings?.global_hotkey
-    ? settings.global_hotkey.replace("CmdOrCtrl", "Cmd")
-    : "Cmd+Shift+P";
+    ? settings.global_hotkey.replace("CmdOrCtrl", "\u2318")
+    : "\u2318\u21E7P";
 
   return (
-    <div className="relative flex flex-col items-center justify-center gap-4 p-8">
-      <div className="absolute top-3 right-3 flex items-center gap-1">
+    <div className="flex items-center justify-between px-4 py-3">
+      <div className="flex items-center gap-2.5">
+        <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+          Prompter
+        </span>
+        <kbd
+          className="px-1.5 py-0.5 text-[10px] font-medium rounded"
+          style={{
+            background: "var(--bg-tertiary)",
+            color: "var(--text-muted)",
+            border: "1px solid var(--border-color)",
+          }}
+        >
+          {hotkey}
+        </kbd>
+      </div>
+      <div className="flex items-center gap-0.5">
         <button
           onClick={onOpenHistory}
-          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="p-1.5 rounded-md transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+          style={{ color: "var(--text-muted)" }}
           title="History"
         >
-          <Clock size={16} />
+          <Clock size={14} />
         </button>
         <button
           onClick={onOpenSettings}
-          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="p-1.5 rounded-md transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+          style={{ color: "var(--text-muted)" }}
           title="Settings"
         >
-          <Settings size={16} />
+          <Settings size={14} />
         </button>
       </div>
-      <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Prompter</h1>
-      <p className="text-sm text-gray-500">
-        Press{" "}
-        <kbd className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs text-gray-600 dark:text-gray-300">
-          {hotkey}
-        </kbd>{" "}
-        to start
-      </p>
     </div>
   );
 }

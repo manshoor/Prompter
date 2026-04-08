@@ -4,6 +4,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 type RecordingState =
   | "idle"
+  | "ready"
   | "recording"
   | "transcribing"
   | "downloading"
@@ -28,7 +29,9 @@ interface RecordingStore {
   downloadProgress: number;
   silenceInterval: ReturnType<typeof setInterval> | null;
 
+  prepareRecording: () => Promise<void>;
   startRecording: () => Promise<void>;
+  skipRecording: () => Promise<void>;
   stopRecording: () => Promise<void>;
   generatePrompt: () => Promise<void>;
   pastePrompt: (text: string) => Promise<void>;
@@ -45,12 +48,24 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
   downloadProgress: 0,
   silenceInterval: null,
 
+  prepareRecording: async () => {
+    try {
+      set({ state: "ready", error: null });
+      const result = await invoke<string>("get_captured_context");
+      const data = JSON.parse(result);
+      set({ selectedText: data.selected_text ?? "", sourceApp: data.source_app ?? null });
+    } catch (e) {
+      set({ state: "error", error: String(e) });
+      setTimeout(() => {
+        if (get().state === "error") get().reset();
+      }, 15_000);
+    }
+  },
+
   startRecording: async () => {
     try {
       set({ state: "recording", error: null });
-      const result = await invoke<string>("start_recording");
-      const data = JSON.parse(result);
-      set({ selectedText: data.selected_text, sourceApp: data.source_app });
+      await invoke("start_recording");
 
       // Start silence detection polling
       const settings = await invoke<{ silence_threshold_secs: number; recording_mode: string }>("get_settings");
@@ -71,6 +86,19 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
         }, 500);
         set({ silenceInterval: pollInterval });
       }
+    } catch (e) {
+      set({ state: "error", error: String(e) });
+      setTimeout(() => {
+        if (get().state === "error") get().reset();
+      }, 15_000);
+    }
+  },
+
+  skipRecording: async () => {
+    try {
+      await invoke("skip_recording");
+      set({ transcription: "" });
+      await get().generatePrompt();
     } catch (e) {
       set({ state: "error", error: String(e) });
       setTimeout(() => {
@@ -148,8 +176,8 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
           bundleId: sourceApp.bundle_id,
         });
       }
-      set({ state: "idle" });
       get().reset();
+      await invoke("hide_window").catch(() => {});
     } catch (e) {
       set({ state: "error", error: String(e) });
       setTimeout(() => {

@@ -140,6 +140,27 @@ pub fn copy_to_clipboard(state: State<AppState>, text: String) -> Result<(), Str
 }
 
 #[tauri::command]
+pub fn delete_prompt(state: State<AppState>, id: i64) -> Result<(), String> {
+    state
+        .db
+        .lock()
+        .map_err(|_| "Internal lock error".to_string())?
+        .delete_prompt(id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn search_prompts(state: State<AppState>, query: String, limit: i64) -> Result<String, String> {
+    let history = state
+        .db
+        .lock()
+        .map_err(|_| "Internal lock error".to_string())?
+        .search_prompts(&query, limit)
+        .map_err(|e| e.to_string())?;
+    serde_json::to_string(&history).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn get_prompt_history(state: State<AppState>, limit: i64) -> Result<String, String> {
     let history = state
         .db

@@ -1,23 +1,32 @@
 use super::types::AppSettings;
 use crate::storage::database::Database;
+use std::sync::{Arc, Mutex};
 
 pub struct SettingsManager {
-    db: Database,
+    db: Arc<Mutex<Database>>,
 }
 
 impl SettingsManager {
-    pub fn new(db: Database) -> Self {
+    pub fn new(db: Arc<Mutex<Database>>) -> Self {
         Self { db }
     }
 
     pub fn save(&self, settings: &AppSettings) -> Result<(), Box<dyn std::error::Error>> {
         let json = serde_json::to_string(settings)?;
-        self.db.set_setting("app_settings", &json)?;
+        self.db
+            .lock()
+            .map_err(|_| "Lock error")?
+            .set_setting("app_settings", &json)?;
         Ok(())
     }
 
     pub fn load(&self) -> Result<AppSettings, Box<dyn std::error::Error>> {
-        match self.db.get_setting("app_settings")? {
+        match self
+            .db
+            .lock()
+            .map_err(|_| "Lock error")?
+            .get_setting("app_settings")?
+        {
             Some(json) => Ok(serde_json::from_str(&json)?),
             None => Ok(AppSettings::default()),
         }
@@ -44,7 +53,7 @@ mod tests {
 
     #[test]
     fn test_save_and_load_settings() {
-        let db = Database::new_in_memory().unwrap();
+        let db = Arc::new(Mutex::new(Database::new_in_memory().unwrap()));
         let manager = SettingsManager::new(db);
 
         let mut settings = AppSettings::default();
@@ -61,7 +70,7 @@ mod tests {
 
     #[test]
     fn test_load_returns_defaults_when_empty() {
-        let db = Database::new_in_memory().unwrap();
+        let db = Arc::new(Mutex::new(Database::new_in_memory().unwrap()));
         let manager = SettingsManager::new(db);
         let loaded = manager.load().unwrap();
         assert_eq!(loaded, AppSettings::default());

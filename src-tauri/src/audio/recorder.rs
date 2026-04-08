@@ -66,6 +66,8 @@ pub struct AudioRecorder {
     last_voice_sample: Arc<Mutex<u64>>,
     /// Total samples received
     total_samples: Arc<Mutex<u64>>,
+    /// Current RMS audio level (updated each audio callback)
+    current_rms: Arc<Mutex<f32>>,
 }
 
 // SAFETY: AudioRecorder fields are all protected by Mutex. The cpal::Stream is not Send/Sync
@@ -86,6 +88,7 @@ impl AudioRecorder {
             channels: Mutex::new(0),
             last_voice_sample: Arc::new(Mutex::new(0)),
             total_samples: Arc::new(Mutex::new(0)),
+            current_rms: Arc::new(Mutex::new(0.0)),
         })
     }
 
@@ -104,8 +107,10 @@ impl AudioRecorder {
 
         let last_voice = Arc::clone(&self.last_voice_sample);
         let total = Arc::clone(&self.total_samples);
+        let rms_out = Arc::clone(&self.current_rms);
         *last_voice.lock().unwrap() = 0;
         *total.lock().unwrap() = 0;
+        *rms_out.lock().unwrap() = 0.0;
 
         let stream = device.build_input_stream(
             &config.into(),
@@ -114,6 +119,7 @@ impl AudioRecorder {
 
                 // Check if this chunk has voice (above silence threshold)
                 let rms = (data.iter().map(|s| s * s).sum::<f32>() / data.len() as f32).sqrt();
+                *rms_out.lock().unwrap() = rms;
                 let mut total_count = total.lock().unwrap();
                 *total_count += data.len() as u64;
                 if rms > Self::SILENCE_RMS_THRESHOLD {
@@ -139,6 +145,11 @@ impl AudioRecorder {
         let last_voice = *self.last_voice_sample.lock().unwrap();
         let silent_samples = total.saturating_sub(last_voice);
         silent_samples as f32 / sample_rate as f32
+    }
+
+    /// Returns the current RMS audio level (0.0 = silence, 1.0 = max).
+    pub fn current_rms(&self) -> f32 {
+        *self.current_rms.lock().unwrap()
     }
 
     pub fn stop(&self) -> Result<AudioData, Box<dyn std::error::Error>> {

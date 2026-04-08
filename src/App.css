@@ -3,48 +3,59 @@
 /* Tailwind v4: enable class-based dark mode */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Theme variables */
+/* Theme variables — native macOS aesthetic */
 :root {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f9fafb;
-  --bg-tertiary: #f3f4f6;
-  --text-primary: #111827;
-  --text-secondary: #4b5563;
-  --text-muted: #9ca3af;
-  --border-color: #e5e7eb;
-  --input-bg: #ffffff;
-  --input-border: #d1d5db;
-  --accent: #3b82f6;
+  --bg-primary: rgba(255, 255, 255, 0.78);
+  --bg-secondary: rgba(246, 246, 246, 0.72);
+  --bg-tertiary: rgba(240, 240, 240, 0.65);
+  --bg-solid: #ffffff;
+  --text-primary: #1d1d1f;
+  --text-secondary: #636366;
+  --text-muted: #86868b;
+  --border-color: rgba(0, 0, 0, 0.06);
+  --border-strong: rgba(0, 0, 0, 0.12);
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --input-border: rgba(0, 0, 0, 0.1);
+  --accent: #007AFF;
+  --accent-hover: #0063D1;
+  --danger: #FF3B30;
+  --success: #34C759;
   color-scheme: light;
 }
 
 .dark {
-  --bg-primary: #030712;
-  --bg-secondary: #111827;
-  --bg-tertiary: #1f2937;
-  --text-primary: #f9fafb;
-  --text-secondary: #d1d5db;
-  --text-muted: #6b7280;
-  --border-color: #374151;
-  --input-bg: #1f2937;
-  --input-border: #374151;
-  --accent: #3b82f6;
+  --bg-primary: rgba(30, 30, 30, 0.78);
+  --bg-secondary: rgba(44, 44, 46, 0.65);
+  --bg-tertiary: rgba(58, 58, 60, 0.5);
+  --bg-solid: #1c1c1e;
+  --text-primary: #f5f5f7;
+  --text-secondary: #a1a1a6;
+  --text-muted: #636366;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  --input-bg: rgba(44, 44, 46, 0.8);
+  --input-border: rgba(255, 255, 255, 0.1);
+  --accent: #0A84FF;
+  --accent-hover: #409CFF;
+  --danger: #FF453A;
+  --success: #30D158;
   color-scheme: dark;
 }
 
 /* Base app styles */
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   margin: 0;
   background: transparent;
   overflow: hidden;
-  -webkit-font-smoothing: antialiased;
 }
 
-/* Scrollbar styling */
+/* macOS-style scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -55,44 +66,62 @@ body {
   background: var(--text-muted);
   border-radius: 3px;
 }
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Glass utility */
+.glass {
+  background: var(--bg-primary);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--border-color);
+}
+
+/* Surface — subtle raised card */
+.surface {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.625rem;
+}
 
 /* Settings panel */
 .settings-panel {
   max-width: 600px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 .settings-panel section {
-  margin-bottom: 1.5rem;
-  padding: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.875rem;
   background: var(--bg-secondary);
-  border: 1px solid var(--bg-tertiary);
-  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.625rem;
 }
 
 .settings-panel h1 {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .settings-panel h2 {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .settings-panel label {
   display: block;
   font-size: 0.8125rem;
   color: var(--text-secondary);
-  margin-bottom: 0.375rem;
-  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+  margin-top: 0.5rem;
 }
 
 .settings-panel label:first-child {
@@ -103,20 +132,20 @@ body {
 .settings-panel input[type="text"],
 .settings-panel input[type="password"] {
   width: 100%;
-  padding: 0.5rem 0.75rem;
+  padding: 0.4375rem 0.625rem;
   background: var(--input-bg);
   border: 1px solid var(--input-border);
-  border-radius: 0.5rem;
+  border-radius: 0.375rem;
   color: var(--text-primary);
   font-size: 0.8125rem;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .settings-panel select:focus,
 .settings-panel input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
 }
 
 .settings-panel input[type="range"] {
@@ -126,12 +155,12 @@ body {
 
 /* API key input */
 .api-key-input {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .api-key-input .input-row {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.375rem;
   align-items: center;
 }
 
@@ -140,7 +169,7 @@ body {
 }
 
 .api-key-input .input-row button {
-  padding: 0.5rem 0.75rem;
+  padding: 0.4375rem 0.625rem;
   font-size: 0.75rem;
   border-radius: 0.375rem;
   border: 1px solid var(--input-border);
@@ -162,21 +191,48 @@ body {
 }
 
 .api-key-input .input-row button.danger {
-  border-color: #7f1d1d;
-  color: #fca5a5;
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .api-key-input .input-row button.danger:hover {
-  background: #7f1d1d;
-  color: #fef2f2;
+  background: var(--danger);
+  color: white;
 }
 
 /* Animations */
 @keyframes pulse-recording {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
 }
 
 .animate-recording {
   animation: pulse-recording 1.5s ease-in-out infinite;
+}
+
+/* Segmented control */
+.segmented-control {
+  display: inline-flex;
+  background: var(--bg-tertiary);
+  border-radius: 0.5rem;
+  padding: 2px;
+  gap: 1px;
+}
+
+.segmented-control button {
+  padding: 0.3125rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.segmented-control button.active {
+  background: var(--bg-solid);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }

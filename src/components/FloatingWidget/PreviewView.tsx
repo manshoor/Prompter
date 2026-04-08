@@ -1,47 +1,89 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { Copy, Check } from "lucide-react";
 import { useRecordingStore } from "../../stores/recordingStore";
 
 export function PreviewView() {
   const { generatedPrompt, pastePrompt, reset } = useRecordingStore();
   const [editedPrompt, setEditedPrompt] = useState(generatedPrompt);
-  const [copyStatus, setCopyStatus] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [copyStatus, setCopyStatus] = useState(false);
 
   const handleCopy = async () => {
     try {
       await invoke("copy_to_clipboard", { text: editedPrompt });
-      setCopyStatus("Copied!");
+      setCopyStatus(true);
+      setTimeout(() => setCopyStatus(false), 1500);
     } catch {
-      setCopyStatus("Failed");
+      // ignore
     }
-    setTimeout(() => setCopyStatus(null), 2000);
   };
 
+  const wordCount = editedPrompt.trim().split(/\s+/).filter(Boolean).length;
+
   return (
-    <div className="flex flex-col gap-3 p-4">
-      <h3 className="text-sm font-medium text-gray-600 dark:text-gray-300">Generated Prompt</h3>
-      <textarea
-        value={editedPrompt}
-        onChange={(e) => setEditedPrompt(e.target.value)}
-        rows={8}
-        className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-200 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-      <div className="flex gap-2">
+    <div className="flex flex-col gap-2.5 px-4 pb-4 pt-1">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+          Generated Prompt
+        </span>
+        <span className="text-[10px] tabular-nums" style={{ color: "var(--text-muted)" }}>
+          {wordCount} words
+        </span>
+      </div>
+
+      {isEditing ? (
+        <textarea
+          value={editedPrompt}
+          onChange={(e) => setEditedPrompt(e.target.value)}
+          rows={8}
+          autoFocus
+          onBlur={() => setIsEditing(false)}
+          className="w-full p-2.5 text-xs leading-relaxed rounded-lg resize-none focus:outline-none focus:ring-2"
+          style={{
+            background: "var(--input-bg)",
+            color: "var(--text-primary)",
+            border: "1px solid var(--input-border)",
+          }}
+        />
+      ) : (
+        <div
+          onClick={() => setIsEditing(true)}
+          className="w-full p-2.5 text-xs leading-relaxed rounded-lg cursor-text max-h-56 overflow-y-auto whitespace-pre-wrap"
+          style={{
+            background: "var(--bg-secondary)",
+            color: "var(--text-primary)",
+            border: "1px solid var(--border-color)",
+          }}
+        >
+          {editedPrompt}
+        </div>
+      )}
+
+      <div className="flex items-center gap-2">
         <button
           onClick={() => pastePrompt(editedPrompt)}
-          className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
+          className="flex-1 px-3 py-2 text-white rounded-lg text-sm font-medium transition-all active:scale-[0.98]"
+          style={{ background: "var(--accent)" }}
         >
           Paste to App
         </button>
         <button
           onClick={handleCopy}
-          className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm transition-colors"
+          className="p-2 rounded-lg transition-all active:scale-95"
+          style={{
+            background: "var(--bg-secondary)",
+            color: copyStatus ? "var(--success)" : "var(--text-secondary)",
+            border: "1px solid var(--border-color)",
+          }}
+          title="Copy"
         >
-          {copyStatus ?? "Copy"}
+          {copyStatus ? <Check size={14} /> : <Copy size={14} />}
         </button>
         <button
           onClick={reset}
-          className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm transition-colors"
+          className="px-3 py-2 text-sm rounded-lg transition-colors"
+          style={{ color: "var(--text-muted)" }}
         >
           Cancel
         </button>

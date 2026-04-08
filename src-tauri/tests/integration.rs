@@ -1,10 +1,11 @@
 use prompter_lib::settings::manager::SettingsManager;
 use prompter_lib::settings::types::*;
 use prompter_lib::storage::database::Database;
+use std::sync::{Arc, Mutex};
 
 #[test]
 fn test_settings_full_round_trip() {
-    let db = Database::new_in_memory().unwrap();
+    let db = Arc::new(Mutex::new(Database::new_in_memory().unwrap()));
     let manager = SettingsManager::new(db);
 
     let settings = AppSettings {

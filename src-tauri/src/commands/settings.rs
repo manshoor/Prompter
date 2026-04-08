@@ -6,7 +6,7 @@ use crate::settings::manager::SettingsManager;
 use crate::settings::types::AppSettings;
 use crate::storage::database::Database;
 use std::sync::{Arc, Mutex};
-use tauri::State;
+use tauri::{Manager, State};
 
 pub struct CapturedContext {
     pub selected_text: String,
@@ -18,7 +18,7 @@ pub struct AppState {
     pub keychain: KeychainManager,
     pub clipboard: Mutex<ClipboardManager>,
     pub audio_recorder: Arc<AudioRecorder>,
-    pub db: Mutex<Database>,
+    pub db: Arc<Mutex<Database>>,
     pub captured_context: Mutex<Option<CapturedContext>>,
 }
 
@@ -33,13 +33,70 @@ pub fn get_settings(state: State<AppState>) -> Result<AppSettings, String> {
 }
 
 #[tauri::command]
-pub fn save_settings(state: State<AppState>, settings: AppSettings) -> Result<(), String> {
+pub fn save_settings(
+    state: State<AppState>,
+    app: tauri::AppHandle,
+    settings: AppSettings,
+) -> Result<(), String> {
+    // Load old settings to check if hotkey changed
+    let old_settings = state
+        .settings_manager
+        .lock()
+        .map_err(|_| "Internal lock error".to_string())?
+        .load()
+        .map_err(|e| e.to_string())?;
+
+    // Save new settings
     state
         .settings_manager
         .lock()
         .map_err(|_| "Internal lock error".to_string())?
         .save(&settings)
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+
+    // Re-register hotkey if changed
+    if old_settings.global_hotkey != settings.global_hotkey {
+        re_register_hotkey(&app, &old_settings.global_hotkey, &settings.global_hotkey)?;
+    }
+
+    Ok(())
+}
+
+fn re_register_hotkey(
+    app: &tauri::AppHandle,
+    old_hotkey: &str,
+    new_hotkey: &str,
+) -> Result<(), String> {
+    use tauri::Emitter;
+    use tauri_plugin_global_shortcut::GlobalShortcutExt;
+
+    // Validate new hotkey first
+    let new_shortcut = new_hotkey
+        .parse::<tauri_plugin_global_shortcut::Shortcut>()
+        .map_err(|e| format!("Invalid hotkey '{}': {}", new_hotkey, e))?;
+
+    // Unregister old hotkey
+    if let Ok(old_shortcut) = old_hotkey.parse::<tauri_plugin_global_shortcut::Shortcut>() {
+        let _ = app.global_shortcut().unregister(old_shortcut);
+    }
+
+    // Register new hotkey
+    let app_handle = app.clone();
+    app.global_shortcut()
+        .on_shortcut(new_shortcut, move |_app, _shortcut, event| {
+            if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                crate::capture_context(&app_handle);
+                let _ = app_handle.emit("hotkey-triggered", ());
+                if let Some(window) = app_handle.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+        })
+        .map_err(|e| format!("Failed to register hotkey: {}", e))?;
+
+    eprintln!("[settings] hotkey re-registered: {} -> {}", old_hotkey, new_hotkey);
+    Ok(())
 }
 
 #[tauri::command]
