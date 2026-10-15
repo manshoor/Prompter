@@ -2,7 +2,8 @@
 name = "prompter"
 version = "0.1.0"
 description = "macOS desktop app that captures voice + selected code to generate AI prompts"
-authors = ["you"]
+authors = ["manshoor"]
+license = "MIT"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
